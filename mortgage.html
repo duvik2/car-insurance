@@ -1,0 +1,1922 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>יועץ משכנתאות חכם — השוואת תמהילים וסימולציות</title>
+<meta name="description" content="כלי מתקדם להשוואת הצעות משכנתא, בניית תמהילים, לוחות סילוקין, סימולציות פירעון מוקדם ובדיקות עמידה ברגולציית בנק ישראל.">
+<!-- Emoji favicon (inline SVG, no external request) -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          teal: {
+            50: '#f0fdfa',
+            100: '#ccfbf1',
+            200: '#99f6e4',
+            300: '#5eead4',
+            400: '#2dd4bf',
+            500: '#0d7377', // Custom main brand teal
+            600: '#0a5a5d',
+            700: '#08484a',
+            850: '#063738',
+          },
+          orange: {
+            50: '#fff7ed',
+            100: '#ffedd5',
+            200: '#fed7aa',
+            300: '#fdba74',
+            400: '#fb923c',
+            500: '#ff8c42', // Custom accent orange
+            600: '#e8732a',
+            700: '#c2410c',
+          },
+          slate: {
+            950: '#0f172a'
+          }
+        },
+        fontFamily: {
+          sans: ['Assistant', 'sans-serif'],
+          heebo: ['Heebo', 'sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body {
+    font-family: 'Assistant', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Heebo', sans-serif;
+  }
+  /* Custom scrollbar for better styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Smooth fade-in when switching tabs (premium SaaS feel) */
+  .tab-content:not(.hidden) {
+    animation: tabFade 0.28s ease-out;
+  }
+  @keyframes tabFade {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  /* Subtle lift on offer/KPI cards */
+  .lift { transition: box-shadow .2s ease, transform .2s ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -12px rgba(15,23,42,.18); }
+  @media (prefers-reduced-motion: reduce) {
+    .tab-content:not(.hidden) { animation: none; }
+    .lift:hover { transform: none; }
+  }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+<!-- HEADER -->
+<header class="bg-gradient-to-r from-teal-700 via-teal-600 to-teal-800 text-white shadow-lg border-b border-teal-900/30">
+  <div class="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center text-2xl shadow-inner transform hover:rotate-6 transition-transform duration-300">
+        🏠
+      </div>
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">יועץ משכנתאות חכם</h1>
+        <p class="text-teal-100/90 text-sm mt-0.5">ניתוח והשוואת הצעות · לוחות סילוקין מתקדמים · סימולציות פירעון והצמדה</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="openConfirmModal('איפוס כל הנתונים', 'האם אתה בטוח שברצונך למחוק את כל הנתונים שהזנת? פעולה זו אינה הפיכה.', resetAll)" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border border-white/10 shadow-sm">
+        🗑️ איפוס
+      </button>
+      <button onclick="document.getElementById('import-file-input').click()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border border-white/10 shadow-sm">
+        📂 ייבוא נתונים
+      </button>
+      <button onclick="exportData()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+        💾 ייצוא נתונים
+      </button>
+      <input type="file" id="import-file-input" accept="application/json,.json" class="hidden" onchange="importData(event)">
+    </div>
+  </div>
+</header>
+
+<!-- TABS NAVIGATION -->
+<div class="bg-white shadow-sm sticky top-0 z-30 border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav class="flex gap-2 py-3 overflow-x-auto" aria-label="Tabs">
+      <button onclick="switchTab('props')" data-tab="props" class="tab-btn active px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all bg-teal-500 text-white shadow-md shadow-teal-500/10">
+        <span>🏘️</span> נכסים
+      </button>
+      <button onclick="switchTab('income')" data-tab="income" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+        <span>💵</span> הכנסות והתחייבויות
+      </button>
+      <button onclick="switchTab('offers')" data-tab="offers" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+        <span>🏦</span> הצעות בנקים וסימולציה
+      </button>
+      <button onclick="switchTab('amort')" data-tab="amort" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+        <span>📋</span> לוח סילוקין מפורט
+      </button>
+      <button onclick="switchTab('summary')" data-tab="summary" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+        <span>📊</span> השוואת תמהילים
+      </button>
+      <button onclick="switchTab('rates')" data-tab="rates" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+        <span>📈</span> ריביות שוק והנחות עבודה
+      </button>
+    </nav>
+  </div>
+</div>
+
+<!-- MAIN CONTENT WRAPPER -->
+<main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- ================= PROPERTIES TAB ================= -->
+  <div id="tab-props" class="tab-content space-y-6">
+    <!-- KPIs -->
+    <div id="props-kpis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">🏘️ שווי נכסים לרכישה</h2>
+          <p class="text-sm text-slate-500 mt-1">הזינו את פרטי הנכס/ים המתוכננים לרכישה. שיעור המימון מחושב ביחס לסכומים אלו.</p>
+        </div>
+      </div>
+      
+      <div id="props-list" class="space-y-4 mb-6"></div>
+      
+      <button onclick="addProperty()" class="bg-white hover:bg-slate-50 text-teal-600 border border-teal-600 hover:border-teal-700 font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+        ➕ הוסף נכס חדש
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= INCOME TAB ================= -->
+  <div id="tab-income" class="tab-content hidden space-y-6">
+    <!-- KPIs -->
+    <div id="income-kpis" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    
+    <!-- Incomes -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="border-b border-slate-100 pb-4 mb-6">
+        <h2 class="text-xl font-bold text-slate-900">💵 הכנסות המשפחה (נטו חודשי)</h2>
+        <p class="text-sm text-slate-500 mt-1">ההכנסות המשמשות לחישוב יחס ההחזר המקסימלי המאושר בבנק.</p>
+      </div>
+      <div id="income-list" class="space-y-4 mb-6"></div>
+      <button onclick="addIncome()" class="bg-white hover:bg-slate-50 text-teal-600 border border-teal-600 font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+        ➕ הוסף מקור הכנסה
+      </button>
+    </div>
+
+    <!-- Existing Loans -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="border-b border-slate-100 pb-4 mb-6">
+        <h2 class="text-xl font-bold text-slate-900">💳 הלוואות והתחייבויות קיימות</h2>
+        <p class="text-sm text-slate-500 mt-1">החזרים חודשיים שיתרתם עולה על 18 חודשים (יופחתו מההכנסה הכוללת לצורך חישוב כושר ההחזר).</p>
+      </div>
+      <div id="loans-list" class="space-y-4 mb-6"></div>
+      <button onclick="addLoan()" class="bg-white hover:bg-slate-50 text-teal-600 border border-teal-600 font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+        ➕ הוסף התחייבות/הלוואה
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= BANK OFFERS TAB ================= -->
+  <div id="tab-offers" class="tab-content hidden space-y-6">
+    <!-- Storage unavailable banner -->
+    <div id="storage-banner" class="hidden bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-4 py-3 text-sm flex items-start gap-2">
+      <span class="text-base">⚠️</span>
+      <span>השמירה האוטומטית בדפדפן אינה זמינה (ייתכן שהכלי מוטמע ב‑iframe או בגלישה פרטית). הנתונים יישמרו לזמן העבודה הנוכחי בלבד — מומלץ לייצא לקובץ או ליצור קישור שיתוף כדי לא לאבד אותם.</span>
+    </div>
+
+    <!-- Scenarios / saved mixes -->
+    <div id="scenarios-card"></div>
+
+    <!-- KPIs -->
+    <div id="offers-kpis" class="grid grid-cols-1 md:grid-cols-4 gap-4"></div>
+    <div id="offers-alerts" class="space-y-2"></div>
+    
+    <!-- Offers List -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="border-b border-slate-100 pb-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">🏦 הצעות מבנקים ותמהילים</h2>
+          <p class="text-sm text-slate-500 mt-1">הגדירו הצעות תמהיל שונות. לכל מסלול ניתן להגדיר שינויי ריבית עתידיים או פירעונות מוקדמים בהגדרות המתקדמות.</p>
+        </div>
+        <button onclick="addOffer()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-md flex items-center gap-2">
+          ➕ הוסף תמהיל הצעה חדש
+        </button>
+      </div>
+      
+      <div id="offers-list" class="space-y-8"></div>
+    </div>
+  </div>
+
+  <!-- ================= AMORTIZATION TAB ================= -->
+  <div id="tab-amort" class="tab-content hidden space-y-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="border-b border-slate-100 pb-4 mb-6">
+        <h2 class="text-xl font-bold text-slate-900">📋 לוח סילוקין שנתווסף ומסלולים</h2>
+        <p class="text-sm text-slate-500 mt-1">השפעות הריבית, ההצמדה למדד, ופירעונות מוקדמים מפורטים כאן לפי שנים.</p>
+      </div>
+      
+      <div class="max-w-md mb-6">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">בחרו תמהיל להצגה</label>
+        <select id="amort-select" onchange="renderAmort()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all text-slate-800 font-semibold"></select>
+      </div>
+      
+      <div id="amort-content" class="space-y-6"></div>
+    </div>
+  </div>
+
+  <!-- ================= SUMMARY TAB ================= -->
+  <div id="tab-summary" class="tab-content hidden space-y-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="border-b border-slate-100 pb-4 mb-6">
+        <h2 class="text-xl font-bold text-slate-900">📊 השוואה מלאה של תמהילי המשכנתא</h2>
+        <p class="text-sm text-slate-500 mt-1">סקירה מרוכזת של הנתונים הפיננסיים והעלויות הסופיות לצד המדדים העיקריים.</p>
+      </div>
+      
+      <div class="flex items-center gap-2 mb-6" id="summary-filter"></div>
+      
+      <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <div id="summary-table"></div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="border-b border-slate-100 pb-4 mb-6">
+        <h2 class="text-xl font-bold text-slate-900">📈 התפתחות ההחזר החודשי לאורך השנים</h2>
+        <p class="text-sm text-slate-500 mt-1">גרף התקדמות הממחיש את השפעת פירעונות מוקדמים, מדדים ושינויי ריבית צפויים.</p>
+      </div>
+      <div id="summary-chart" class="p-2"></div>
+    </div>
+  </div>
+
+  <!-- ================= RATES TAB ================= -->
+  <div id="tab-rates" class="tab-content hidden space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4">📈 ריביות שוק לא צמודות (בנק ישראל)</h3>
+        <p class="text-xs text-slate-500 mb-4">טווח ריביות ממוצעות המשמשות כהמלצה ראשונית למסלולים שאינם צמודים.</p>
+        <div id="rates-noncpi" class="overflow-x-auto"></div>
+      </div>
+      
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4">📊 ריביות שוק צמודות מדד</h3>
+        <p class="text-xs text-slate-500 mb-4">טווח ריביות ממוצעות המשמשות כהמלצה ראשונית למסלולים צמודי מדד.</p>
+        <div id="rates-cpi" class="overflow-x-auto"></div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4">⚙️ הנחות עבודה כלליות של המערכת</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">עליית מדד המחירים לצרכן שנתית ממוצעת (%)</label>
+          <input type="number" step="0.1" id="cpi-assumption" oninput="updateAssumption('cpi',this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all text-slate-800 font-semibold">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ריבית הפריים הנוכחית (%)</label>
+          <input type="number" step="0.1" id="prime-assumption" oninput="updateAssumption('prime',this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all text-slate-800 font-semibold">
+        </div>
+      </div>
+      <div class="mt-4 p-4 bg-teal-50 rounded-xl border border-teal-100 text-teal-800 text-sm">
+        💡 <strong>שימו לב:</strong> ריבית הפריים משמשת בסיס למסלולי פריים. אחוז הצמדת המדד משמש כמדד ברירת מחדל אלא אם כן תבצעו התאמה אישית של אחוז ההצמדה למסלול ספציפי.
+      </div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="mt-12 p-4 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-500 text-center leading-relaxed">
+    הנתונים המוצגים במערכת זו, לרבות החישובים, ריביות השוק, תוצאות לוחות הסילוקין וההשוואות, מיועדים להמחשה, ניתוח ואינטגרציה של נתונים בלבד. אין לראות במידע זה ייעוץ משכנתאות מקצועי, המלצה או התחייבות מטעם הבנק. כל המידע נשמר על גבי המכשיר שלכם (דפדפן מקומי בלבד) ואינו מועבר לאף שרת חיצוני.
+  </div>
+</main>
+
+<!-- CONFIRMATION / ALERT MODAL -->
+<div id="custom-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden transform transition-all border border-slate-100">
+    <div class="p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div id="modal-icon" class="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center text-lg">⚠️</div>
+        <h3 id="modal-title" class="text-lg font-bold text-slate-900">כותרת מודאל</h3>
+      </div>
+      <p id="modal-message" class="text-sm text-slate-600 leading-relaxed">הודעת מודאל מפורטת כאן.</p>
+    </div>
+    <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3">
+      <button id="modal-cancel" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all">ביטול</button>
+      <button id="modal-confirm" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all">אישור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════ RESILIENT STORAGE ═══════════════════ */
+/* localStorage can be blocked in 3rd-party iframes (Safari/Brave ITP, WordPress embed).
+   Fall back to in-memory so the app keeps working, and flag availability for a banner. */
+const Storage = (() => {
+  let mem = {}, ok = false;
+  try {
+    const k = '__nsf_t__';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    ok = true;
+  } catch (e) { ok = false; }
+  return {
+    available: ok,
+    get(k) { try { return ok ? localStorage.getItem(k) : (k in mem ? mem[k] : null); } catch (e) { return (k in mem ? mem[k] : null); } },
+    set(k, v) { try { ok ? localStorage.setItem(k, v) : (mem[k] = v); } catch (e) { mem[k] = v; } },
+    remove(k) { try { ok ? localStorage.removeItem(k) : delete mem[k]; } catch (e) { delete mem[k]; } }
+  };
+})();
+
+/* ═══════════════════ STATE ═══════════════════ */
+const LS_KEY = 'nsf_mortgage_advisor_v2_advanced';
+const SCEN_KEY = 'nsf_mortgage_scenarios_v1';
+const TRACK_TYPES = {
+  FIXED: 'קבועה לא צמודה (קל"צ)',
+  VARIABLE: 'משתנה לא צמודה (מל"צ)',
+  PRIME: 'פריים',
+  FIXED_CPI: 'קבועה צמודת מדד (ק"צ)',
+  VARIABLE_CPI: 'משתנה צמודת מדד (מ"צ)'
+};
+const TRACK_COLORS = {
+  FIXED: '#3b82f6',     // Blue
+  VARIABLE: '#f59e0b',  // Amber
+  PRIME: '#10b981',     // Green
+  FIXED_CPI: '#8b5cf6', // Purple
+  VARIABLE_CPI: '#ec4899' // Pink
+};
+const OFFER_COLORS = ['#0d7377', '#ff8c42', '#3b82f6', '#8b5cf6', '#10b981', '#ec4899', '#f59e0b', '#06b6d4'];
+
+const defaultState = () => ({
+  properties: [{ id: uid(), city: '', value: 1500000, type: 'first' }],
+  incomes: [{ id: uid(), source: 'משכורת ראשית', amount: 15000 }],
+  loans: [],
+  offers: [
+    {
+      id: uid(),
+      bank: 'הצעה 1 - לדוגמה',
+      tracks: [
+        { id: uid(), type: 'FIXED', amount: 400000, rate: 4.8, termMonths: 240, customCpi: null, rateChanges: [], prepayments: [] },
+        { id: uid(), type: 'PRIME', amount: 300000, rate: 5.5, termMonths: 300, customCpi: null, rateChanges: [], prepayments: [] },
+        { id: uid(), type: 'VARIABLE_CPI', amount: 300000, rate: 3.5, termMonths: 300, customCpi: null, rateChanges: [], prepayments: [] }
+      ]
+    }
+  ],
+  marketRates: {
+    nonCpi: [
+      { period: 'עד 5 שנים', min: 12, max: 60, rate: 5.2 },
+      { period: '5-10 שנים', min: 60, max: 120, rate: 5.0 },
+      { period: '10-15 שנים', min: 120, max: 180, rate: 5.1 },
+      { period: '15-20 שנים', min: 180, max: 240, rate: 5.3 },
+      { period: '20-25 שנים', min: 240, max: 300, rate: 5.5 },
+      { period: 'מעל 25 שנים', min: 300, max: 360, rate: 5.7 },
+    ],
+    cpi: [
+      { period: 'עד 5 שנים', min: 12, max: 60, rate: 2.8 },
+      { period: '5-10 שנים', min: 60, max: 120, rate: 3.0 },
+      { period: '10-15 שנים', min: 120, max: 180, rate: 3.3 },
+      { period: '15-20 שנים', min: 180, max: 240, rate: 3.6 },
+      { period: 'מעל 20 שנים', min: 240, max: 360, rate: 3.9 },
+    ],
+  },
+  assumptions: { cpi: 2.5, prime: 6.0 },
+  selectedAmort: null,
+  summaryFilter: 'all',
+});
+
+let S = loadState();
+
+function uid() { return Math.random().toString(36).slice(2, 10); }
+
+function loadState() {
+  try {
+    const r = Storage.get(LS_KEY);
+    if (r) {
+      const p = JSON.parse(r);
+      // Migrate / ensure empty arrays exist on tracks
+      if (p.offers) {
+        p.offers.forEach(o => {
+          if (o.tracks) {
+            o.tracks.forEach(t => {
+              if (!t.rateChanges) t.rateChanges = [];
+              if (!t.prepayments) t.prepayments = [];
+            });
+          }
+        });
+      }
+      return Object.assign(defaultState(), p);
+    }
+  } catch (e) {
+    console.error("Error loading state", e);
+  }
+  return defaultState();
+}
+
+function save() {
+  try {
+    Storage.set(LS_KEY, JSON.stringify(S));
+  } catch (e) {
+    console.error("Error saving state", e);
+  }
+}
+
+function nis(n) {
+  return '₪' + Math.round(n || 0).toLocaleString('he-IL');
+}
+
+function pct(n) {
+  return (n || 0).toFixed(2) + '%';
+}
+
+/* ═══════════════════ MORTGAGE ENGINE ═══════════════════ */
+function calcTrack(track) {
+  const { amount, rate, termMonths, type, rateChanges = [], prepayments = [], customCpi } = track;
+  if (!amount || amount <= 0 || !termMonths || termMonths <= 0) return null;
+
+  // Track CPI inflation rate (use custom override if defined, else fallback to global assumption)
+  const isCpi = type.includes('CPI');
+  const activeCpiAnnual = (customCpi !== undefined && customCpi !== null && customCpi !== '') ? parseFloat(customCpi) : S.assumptions.cpi;
+  const cpiMonthly = isCpi ? (activeCpiAnnual / 100 / 12) : 0;
+
+  let balance = amount;
+  let curRate = rate;
+  let totInt = 0;
+  let totCpi = 0;
+  let totPay = 0;
+  let prepaymentsSum = 0;
+  const schedule = [];
+
+  const sortedChanges = (rateChanges || []).slice().sort((a, b) => a.atMonth - b.atMonth);
+  const sortedPrepayments = (prepayments || []).slice().sort((a, b) => a.month - b.month);
+
+  // Initial payment calculation
+  let mRate = curRate / 100 / 12;
+  let currentMonthlyPayment = 0;
+  if (mRate === 0) {
+    currentMonthlyPayment = balance / termMonths;
+  } else {
+    const f = Math.pow(1 + mRate, termMonths);
+    currentMonthlyPayment = balance * (mRate * f) / (f - 1);
+  }
+
+  let ended = false;
+  const basePayment = currentMonthlyPayment; // nominal first payment (headline figure)
+
+  for (let m = 1; m <= termMonths; m++) {
+    if (ended || balance <= 0.05) break;
+
+    // 1. Check for manual scheduled rate changes at this month
+    const ch = sortedChanges.find(c => c.atMonth === m);
+    let rateChangedThisMonth = false;
+    if (ch) {
+      curRate = ch.newRate;
+      mRate = curRate / 100 / 12;
+      rateChangedThisMonth = true;
+    }
+
+    // 2. CPI indexation of a linked (צמוד מדד) loan.
+    //    In a real Spitzer-linked loan BOTH the outstanding balance AND the monthly
+    //    payment are restated by the index, so the loan still amortizes to zero and
+    //    the payment rises over time. Indexation starts from month 2 so that the
+    //    headline first payment equals the nominal base payment.
+    let cpiAdj = 0;
+    if (isCpi && cpiMonthly !== 0 && m > 1) {
+      cpiAdj = balance * cpiMonthly;
+      balance += cpiAdj;
+      currentMonthlyPayment *= (1 + cpiMonthly);
+    }
+
+    const remMonths = termMonths - m + 1;
+
+    // 3. Early prepayment processing
+    const prepay = sortedPrepayments.find(p => p.month === m);
+    let appliedPrepayment = 0;
+
+    if (prepay && prepay.amount > 0) {
+      appliedPrepayment = Math.min(prepay.amount, balance);
+      balance -= appliedPrepayment;
+      prepaymentsSum += appliedPrepayment;
+    }
+
+    // 4. Monthly payment installment (recalc on rate change or payment-reducing prepayment)
+    let pay = currentMonthlyPayment;
+    if (rateChangedThisMonth || (prepay && prepay.type === 'reduce_payment')) {
+      if (balance <= 0) {
+        pay = 0;
+      } else if (mRate === 0) {
+        pay = balance / remMonths;
+      } else {
+        const f = Math.pow(1 + mRate, remMonths);
+        pay = balance * (mRate * f) / (f - 1);
+      }
+      currentMonthlyPayment = pay;
+    }
+    // shorten_term: keep the same payment, the balance simply drops faster.
+
+    // 5. Interest accrues on the (already indexed) balance
+    const interest = balance * mRate;
+    let principal = pay - interest;
+    if (principal > balance) {
+      principal = balance;
+      pay = principal + interest;
+    }
+
+    totInt += interest;
+    totCpi += cpiAdj;
+    totPay += pay;
+
+    balance -= principal;
+
+    schedule.push({
+      month: m,
+      payment: pay + appliedPrepayment, // Cash outflow
+      regularPayment: pay,
+      prepayment: appliedPrepayment,
+      prepaymentType: prepay ? prepay.type : null,
+      principal,
+      interest,
+      balance,
+      cpi: cpiAdj,
+      rate: curRate
+    });
+
+    if (balance <= 0.05) {
+      ended = true;
+    }
+  }
+
+  return {
+    type,
+    amount,
+    rate,
+    termMonths,
+    monthlyPayment: schedule[0]?.regularPayment || basePayment,
+    totalInterest: totInt,
+    totalCpi: totCpi,
+    // Cash actually paid = regular payments (indexation is already embedded in them) + prepayments.
+    // Adding totCpi here would double-count the indexation.
+    totalPaid: totPay + prepaymentsSum,
+    prepaymentsSum,
+    schedule
+  };
+}
+
+// Interest-rate stress test: Bank of Israel guidance is to verify the borrower can
+// still service the loan if variable/prime tracks rise. We bump only the non-fixed
+// tracks by STRESS_BUMP points and recompute the headline (annuity) payment.
+const STRESS_BUMP = 2; // percentage points
+const VARIABLE_TYPES = ['PRIME', 'VARIABLE', 'VARIABLE_CPI'];
+const FIXED_TYPES = ['FIXED', 'FIXED_CPI'];
+
+function stressedTrackPayment(t) {
+  const amount = t.amount, term = t.termMonths;
+  if (!amount || amount <= 0 || !term || term <= 0) return 0;
+  const bump = VARIABLE_TYPES.includes(t.type) ? STRESS_BUMP : 0;
+  const mRate = (t.rate + bump) / 100 / 12;
+  if (mRate === 0) return amount / term;
+  const f = Math.pow(1 + mRate, term);
+  return amount * (mRate * f) / (f - 1);
+}
+
+function calcOffer(offer) {
+  const tracks = (offer.tracks || []).map(calcTrack).filter(Boolean);
+  if (!tracks.length) return { tracks: [], totalAmount: 0, monthlyPayment: 0, totalInterest: 0, totalCpi: 0, totalPaid: 0, avgRate: 0, maxTerm: 0, prepaymentsSum: 0, stressedMonthly: 0, fixedAmount: 0, fixedShare: 0 };
+
+  const totalAmount = tracks.reduce((s, t) => s + t.amount, 0);
+  const monthlyPayment = tracks.reduce((s, t) => s + t.monthlyPayment, 0);
+  const totalInterest = tracks.reduce((s, t) => s + t.totalInterest, 0);
+  const totalCpi = tracks.reduce((s, t) => s + t.totalCpi, 0);
+  const prepaymentsSum = tracks.reduce((s, t) => s + t.prepaymentsSum, 0);
+  const totalPaid = tracks.reduce((s, t) => s + t.totalPaid, 0);
+  const avgRate = totalAmount > 0 ? tracks.reduce((s, t) => s + t.rate * t.amount, 0) / totalAmount : 0;
+  const maxTerm = Math.max(...tracks.map(t => t.termMonths));
+  const stressedMonthly = tracks.reduce((s, t) => s + stressedTrackPayment(t), 0);
+  // Fixed-rate composition (BoI Directive 329: at least 1/3 of the loan must be fixed-rate).
+  const fixedAmount = tracks.reduce((s, t) => s + (FIXED_TYPES.includes(t.type) ? t.amount : 0), 0);
+  const fixedShare = totalAmount > 0 ? fixedAmount / totalAmount : 0;
+
+  return { tracks, totalAmount, monthlyPayment, totalInterest, totalCpi, totalPaid, avgRate, maxTerm, prepaymentsSum, stressedMonthly, fixedAmount, fixedShare };
+}
+
+function suggestRate(type, termMonths) {
+  const table = type.includes('CPI') ? S.marketRates.cpi : S.marketRates.nonCpi;
+  const row = table.find(r => termMonths >= r.min && termMonths <= r.max) || table[table.length - 1];
+  if (type === 'PRIME') return Math.max(S.assumptions.prime - 0.5, 0.5);
+  return row ? row.rate : 5;
+}
+
+/* ═══════════════════ MODAL CONTROLS ═══════════════════ */
+let modalAction = null;
+function openConfirmModal(title, msg, onConfirm) {
+  document.getElementById('modal-title').innerText = title;
+  document.getElementById('modal-message').innerText = msg;
+  document.getElementById('modal-icon').innerText = '⚠️';
+  document.getElementById('modal-cancel').classList.remove('hidden');
+  document.getElementById('custom-modal').classList.remove('hidden');
+  modalAction = onConfirm;
+}
+
+function openAlertModal(title, msg) {
+  document.getElementById('modal-title').innerText = title;
+  document.getElementById('modal-message').innerText = msg;
+  document.getElementById('modal-icon').innerText = '💡';
+  document.getElementById('modal-cancel').classList.add('hidden');
+  document.getElementById('custom-modal').classList.remove('hidden');
+  modalAction = null;
+}
+
+document.getElementById('modal-cancel').onclick = () => {
+  document.getElementById('custom-modal').classList.add('hidden');
+  modalAction = null;
+};
+
+document.getElementById('modal-confirm').onclick = () => {
+  document.getElementById('custom-modal').classList.add('hidden');
+  if (modalAction) {
+    modalAction();
+    modalAction = null;
+  }
+};
+
+/* ═══════════════════ TOTALS ═══════════════════ */
+function totalProperty() { return S.properties.reduce((s, p) => s + (+p.value || 0), 0); }
+function totalIncome() { return S.incomes.reduce((s, i) => s + (+i.amount || 0), 0); }
+function totalLoans() { return S.loans.reduce((s, l) => s + (+l.payment || 0), 0); }
+function netIncome() { return totalIncome() - totalLoans(); }
+
+/* ═══════════════════ TABS ═══════════════════ */
+function switchTab(t) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.dataset.tab === t) {
+      b.className = "tab-btn px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all bg-teal-500 text-white shadow-md shadow-teal-500/10";
+    } else {
+      b.className = "tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all";
+    }
+  });
+  
+  document.querySelectorAll('.tab-content').forEach(x => {
+    x.classList.toggle('hidden', x.id !== 'tab-' + t);
+  });
+  
+  if (t === 'amort') renderAmort();
+  if (t === 'summary') renderSummary();
+  if (t === 'rates') renderRates();
+}
+
+/* ═══════════════════ PROPERTIES ═══════════════════ */
+const PROP_TYPES = {
+  first: 'דירה ראשונה (עד 75% מימון)',
+  replace: 'דירה חליפית (עד 70%)',
+  invest: 'דירה להשקעה (עד 50%)'
+};
+
+function addProperty() {
+  S.properties.push({ id: uid(), city: '', value: 0, type: 'first' });
+  save();
+  renderProps();
+}
+
+function delProperty(id) {
+  if (S.properties.length <= 1) return;
+  S.properties = S.properties.filter(p => p.id !== id);
+  save();
+  renderProps();
+}
+
+function updProp(id, f, v) {
+  const p = S.properties.find(x => x.id === id);
+  if (p) {
+    p[f] = f === 'value' ? (+v || 0) : v;
+    save();
+    if (f === 'value') {
+      const h = document.getElementById('prop-hint-' + id);
+      if (h) h.textContent = (+v > 0) ? nis(+v) : '';
+    }
+    renderPropsKpis();
+  }
+}
+
+function renderProps() {
+  const el = document.getElementById('props-list');
+  el.innerHTML = S.properties.map((p, i) => `
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 relative group">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-sm font-bold text-slate-500">נכס #${i + 1}</span>
+        ${S.properties.length > 1 ? `
+          <button onclick="delProperty('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold transition-all">
+            ✕ הסר נכס
+          </button>
+        ` : ''}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">עיר / ישוב</label>
+          <input value="${p.city || ''}" oninput="updProp('${p.id}','city',this.value)" placeholder="לדוגמה: תל אביב" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">שווי הנכס (₪)</label>
+          <input type="number" value="${p.value || ''}" oninput="updProp('${p.id}','value',this.value)" placeholder="לדוגמה: 2,500,000" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all">
+          <p id="prop-hint-${p.id}" class="text-[11px] font-semibold text-slate-400 mt-1 h-3">${p.value ? nis(p.value) : ''}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">סוג המימון</label>
+          <select onchange="updProp('${p.id}','type',this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all">
+            ${Object.entries(PROP_TYPES).map(([v, l]) => `<option value="${v}" ${p.type === v ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>`).join('');
+  renderPropsKpis();
+}
+
+function renderPropsKpis() {
+  const tot = totalProperty();
+  document.getElementById('props-kpis').innerHTML = `
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">שווי נכסים כולל</p>
+        <p class="text-2xl font-black text-slate-800">${nis(tot)}</p>
+      </div>
+      <div class="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center text-lg">🏠</div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">מספר נכסים</p>
+        <p class="text-2xl font-black text-slate-800">${S.properties.length}</p>
+      </div>
+      <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg">📊</div>
+    </div>`;
+}
+
+/* ═══════════════════ INCOME & LOANS ═══════════════════ */
+function addIncome() { S.incomes.push({ id: uid(), source: '', amount: 0 }); save(); renderIncome(); }
+function delIncome(id) { if (S.incomes.length <= 1) return; S.incomes = S.incomes.filter(i => i.id !== id); save(); renderIncome(); }
+function updIncome(id, f, v) { const i = S.incomes.find(x => x.id === id); if (i) { i[f] = f === 'amount' ? (+v || 0) : v; save(); renderIncomeKpis(); } }
+
+function addLoan() { S.loans.push({ id: uid(), name: '', payment: 0 }); save(); renderIncome(); }
+function delLoan(id) { S.loans = S.loans.filter(l => l.id !== id); save(); renderIncome(); }
+function updLoan(id, f, v) { const l = S.loans.find(x => x.id === id); if (l) { l[f] = f === 'payment' ? (+v || 0) : v; save(); renderIncomeKpis(); } }
+
+function renderIncome() {
+  document.getElementById('income-list').innerHTML = S.incomes.map((it, i) => `
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-sm font-bold text-slate-500">הכנסה #${i + 1}</span>
+        ${S.incomes.length > 1 ? `<button onclick="delIncome('${it.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold">✕ הסר</button>` : ''}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-2">מקור ההכנסה</label>
+          <input value="${it.source || ''}" oninput="updIncome('${it.id}','source',this.value)" placeholder="לדוגמה: משכורת בן/בת זוג" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-2">סכום חודשי נטו (₪)</label>
+          <input type="number" value="${it.amount || ''}" oninput="updIncome('${it.id}','amount',this.value)" placeholder="10,000" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all">
+        </div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('loans-list').innerHTML = S.loans.length ? S.loans.map(l => `
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-sm font-bold text-slate-500">התחייבות / הלוואה</span>
+        <button onclick="delLoan('${l.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold">✕ הסר</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-2">תיאור ההתחייבות</label>
+          <input value="${l.name || ''}" oninput="updLoan('${l.id}','name',this.value)" placeholder="לדוגמה: הלוואה לרכב" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-2">החזר חודשי (₪)</label>
+          <input type="number" value="${l.payment || ''}" oninput="updLoan('${l.id}','payment',this.value)" placeholder="1,500" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all">
+        </div>
+      </div>
+    </div>`).join('') : `
+    <div class="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+      <div class="text-3xl mb-2">✅</div>
+      <p class="text-sm font-semibold">אין הלוואות או התחייבויות קיימות</p>
+      <p class="text-xs text-slate-400 mt-1">תוכלו להוסיף הלוואות שיילקחו בחשבון לחישוב ההכנסה הפנויה.</p>
+    </div>`;
+  renderIncomeKpis();
+}
+
+function renderIncomeKpis() {
+  document.getElementById('income-kpis').innerHTML = `
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase mb-1">סך הכנסות משפחתיות</p>
+        <p class="text-2xl font-black text-emerald-600">${nis(totalIncome())}</p>
+      </div>
+      <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg">💵</div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase mb-1">סך החזרי הלוואות</p>
+        <p class="text-2xl font-black text-rose-600">${nis(totalLoans())}</p>
+      </div>
+      <div class="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-lg">💳</div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase mb-1">הכנסה פנויה נטו</p>
+        <p class="text-2xl font-black text-slate-800">${nis(netIncome())}</p>
+      </div>
+      <div class="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center text-lg font-bold">₪</div>
+    </div>`;
+}
+
+/* ═══════════════════ OFFERS ═══════════════════ */
+function addOffer() {
+  S.offers.push({ id: uid(), bank: '', tracks: [newTrack()] });
+  save();
+  renderOffers();
+}
+
+function newTrack() {
+  return {
+    id: uid(),
+    type: 'FIXED',
+    amount: 300000,
+    rate: 4.8,
+    termMonths: 240,
+    customCpi: null,
+    rateChanges: [],
+    prepayments: []
+  };
+}
+
+function delOffer(id) {
+  S.offers = S.offers.filter(o => o.id !== id);
+  save();
+  renderOffers();
+}
+
+function updOffer(id, f, v) {
+  const o = S.offers.find(x => x.id === id);
+  if (o) {
+    o[f] = v;
+    save();
+    if (f === 'bank') renderOffersKpisOnly(); else renderOffers();
+  }
+}
+
+function addTrack(oid) {
+  const o = S.offers.find(x => x.id === oid);
+  if (o) {
+    o.tracks.push(newTrack());
+    save();
+    renderOffers();
+  }
+}
+
+function delTrack(oid, tid) {
+  const o = S.offers.find(x => x.id === oid);
+  if (o && o.tracks.length > 1) {
+    o.tracks = o.tracks.filter(t => t.id !== tid);
+    save();
+    renderOffers();
+  }
+}
+
+function updTrack(oid, tid, f, v) {
+  const o = S.offers.find(x => x.id === oid); if (!o) return;
+  const t = o.tracks.find(x => x.id === tid); if (!t) return;
+
+  if (f === 'type') {
+    t.type = v;
+    t.rate = suggestRate(v, t.termMonths);
+    save();
+    renderOffers(); // structural: rate + advanced panel may change → full render is fine (select change, no focus to lose)
+    return;
+  }
+
+  if (f === 'amount' || f === 'termMonths' || f === 'rate') {
+    t[f] = +v || 0;
+  } else if (f === 'customCpi') {
+    t[f] = v === '' ? null : parseFloat(v);
+  } else {
+    t[f] = v;
+  }
+  save();
+  if (f === 'amount') {
+    const h = document.getElementById('track-amt-hint-' + tid);
+    if (h) h.textContent = (+v > 0) ? nis(+v) : '';
+  }
+  // Lightweight: keep the input focused while live-updating only the computed stats.
+  refreshOfferStats(oid);
+}
+
+// Recompute and repaint only the stat surfaces, leaving all input fields (and focus) untouched.
+function refreshOfferStats(oid) {
+  const o = S.offers.find(x => x.id === oid);
+  if (o) {
+    const c = calcOffer(o);
+    const el = document.getElementById('footer-stats-' + oid);
+    if (el) el.innerHTML = offerFooterStatsHTML(c, totalProperty(), netIncome());
+  }
+  renderOffersKpis();
+  renderOffers_amortSelect();
+}
+
+function applySuggestedRate(oid, tid) {
+  const o = S.offers.find(x => x.id === oid); const t = o.tracks.find(x => x.id === tid);
+  t.rate = suggestRate(t.type, t.termMonths);
+  save();
+  renderOffers();
+}
+
+// Sub-component state for expanding Advanced Settings UI per track
+let activeAdvancedTracks = {}; 
+
+function toggleAdvanced(trackId) {
+  activeAdvancedTracks[trackId] = !activeAdvancedTracks[trackId];
+  const panel = document.getElementById(`advanced-panel-${trackId}`);
+  if (panel) {
+    panel.classList.toggle('hidden', !activeAdvancedTracks[trackId]);
+  }
+}
+
+/* Rate Change inside track */
+function addRateChange(oid, tid) {
+  const o = S.offers.find(x => x.id === oid); const t = o.tracks.find(x => x.id === tid);
+  if (!t.rateChanges) t.rateChanges = [];
+  t.rateChanges.push({ id: uid(), atMonth: 60, newRate: t.rate });
+  save();
+  renderOffers();
+}
+
+function delRateChange(oid, tid, rcid) {
+  const o = S.offers.find(x => x.id === oid); const t = o.tracks.find(x => x.id === tid);
+  t.rateChanges = t.rateChanges.filter(c => c.id !== rcid);
+  save();
+  renderOffers();
+}
+
+function updRateChange(oid, tid, rcid, f, v) {
+  const o = S.offers.find(x => x.id === oid); const t = o.tracks.find(x => x.id === tid);
+  const rc = t.rateChanges.find(c => c.id === rcid);
+  if (rc) {
+    rc[f] = +v || 0;
+    save();
+    refreshOfferStats(oid);
+  }
+}
+
+/* Prepayments inside track */
+function addPrepayment(oid, tid) {
+  const o = S.offers.find(x => x.id === oid); const t = o.tracks.find(x => x.id === tid);
+  if (!t.prepayments) t.prepayments = [];
+  t.prepayments.push({ id: uid(), month: 60, amount: 20000, type: 'reduce_payment' });
+  save();
+  renderOffers();
+}
+
+function delPrepayment(oid, tid, pid) {
+  const o = S.offers.find(x => x.id === oid); const t = o.tracks.find(x => x.id === tid);
+  t.prepayments = t.prepayments.filter(p => p.id !== pid);
+  save();
+  renderOffers();
+}
+
+function updPrepayment(oid, tid, pid, f, v) {
+  const o = S.offers.find(x => x.id === oid); const t = o.tracks.find(x => x.id === tid);
+  const p = t.prepayments.find(x => x.id === pid);
+  if (p) {
+    p[f] = (f === 'month' || f === 'amount') ? (+v || 0) : v;
+    save();
+    refreshOfferStats(oid);
+  }
+}
+
+function renderOffers() {
+  const el = document.getElementById('offers-list');
+  if (!S.offers.length) {
+    el.innerHTML = `
+      <div class="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+        <div class="text-5xl mb-3">🏦</div>
+        <p class="text-lg font-bold text-slate-700">אין תמהילי הצעות כרגע</p>
+        <p class="text-sm text-slate-500 mt-1 mb-4">לחצו על הכפתור "הוסף תמהיל הצעה חדש" כדי להתחיל ליצור השוואות.</p>
+        <button onclick="addOffer()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md">
+          הוסף הצעה ראשונה
+        </button>
+      </div>`;
+    renderOffersKpis();
+    return;
+  }
+  
+  const tp = totalProperty(), ni = netIncome();
+  
+  el.innerHTML = S.offers.map((o, oi) => {
+    const c = calcOffer(o);
+    const ltv = tp > 0 ? (c.totalAmount / tp * 100) : 0;
+    const dti = ni > 0 ? (c.monthlyPayment / ni * 100) : 0;
+    const color = OFFER_COLORS[oi % OFFER_COLORS.length];
+    
+    return `
+      <div class="lift border border-slate-200 rounded-2xl shadow-sm bg-white overflow-hidden" style="border-right-width: 6px; border-right-color: ${color}">
+        <!-- Card Header -->
+        <div class="bg-slate-50/70 border-b border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div class="w-full sm:w-auto">
+            <input value="${o.bank || ''}" oninput="updOffer('${o.id}','bank',this.value)" placeholder="שם הבנק / הצעה ${oi + 1}" class="bg-transparent border-b border-dashed border-slate-300 hover:border-slate-500 focus:border-teal-500 text-base font-bold text-slate-800 py-1 px-2 focus:outline-none w-full sm:w-64">
+          </div>
+          <button onclick="openConfirmModal('מחיקת הצעה', 'האם אתה בטוח שברצונך למחוק תמהיל הצעה זה?', () => delOffer('${o.id}'))" class="text-red-500 hover:text-red-700 text-xs font-bold self-end sm:self-auto">
+            ✕ מחק הצעה
+          </button>
+        </div>
+        
+        <!-- Tracks List -->
+        <div class="p-6 space-y-4">
+          ${o.tracks.map((t, ti) => {
+            const sug = suggestRate(t.type, t.termMonths);
+            const isAdvancedOpen = activeAdvancedTracks[t.id] || false;
+            
+            return `
+              <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                <!-- Main Track Line -->
+                <div class="p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div class="md:col-span-3">
+                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">מסלול משכנתא</label>
+                    <select onchange="updTrack('${o.id}','${t.id}','type',this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-700 focus:ring-1 focus:ring-teal-500 focus:outline-none">
+                      ${Object.entries(TRACK_TYPES).map(([v, l]) => `<option value="${v}" ${t.type === v ? 'selected' : ''}>${l}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="md:col-span-3">
+                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">סכום במסלול (₪)</label>
+                    <input type="number" value="${t.amount || ''}" oninput="updTrack('${o.id}','${t.id}','amount',this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none font-bold">
+                    <p id="track-amt-hint-${t.id}" class="text-[10px] font-semibold text-slate-400 mt-1 h-3">${t.amount ? nis(t.amount) : ''}</p>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">ריבית המסלול %</label>
+                    <div class="relative">
+                      <input type="number" step="0.01" value="${t.rate || ''}" oninput="updTrack('${o.id}','${t.id}','rate',this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none font-bold pr-14">
+                      <button onclick="applySuggestedRate('${o.id}','${t.id}')" title="עדכן לריבית מומלצת: ${sug}%" class="absolute left-1 top-1 bottom-1 px-1.5 bg-slate-100 hover:bg-slate-200 rounded text-[9px] font-bold text-slate-500 border border-slate-200">
+                        המלץ
+                      </button>
+                    </div>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">חודשים (תקופה)</label>
+                    <input type="number" value="${t.termMonths || ''}" oninput="updTrack('${o.id}','${t.id}','termMonths',this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none font-bold">
+                  </div>
+                  
+                  <!-- Actions Column -->
+                  <div class="md:col-span-2 flex justify-between items-center gap-2">
+                    <button onclick="toggleAdvanced('${t.id}')" class="text-teal-600 hover:text-teal-800 text-xs font-bold flex items-center gap-1">
+                      ⚙️ הגדרות מתקדמות
+                    </button>
+                    ${o.tracks.length > 1 ? `
+                      <button onclick="delTrack('${o.id}','${t.id}')" class="text-slate-400 hover:text-red-500 text-sm transition-all p-1" title="הסר מסלול">
+                        ✕
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+                
+                <!-- Advanced Track Settings Panel -->
+                <div id="advanced-panel-${t.id}" class="border-t border-slate-200 bg-slate-50 p-4 ${isAdvancedOpen ? '' : 'hidden'}">
+                  <div class="space-y-4">
+                    <!-- Custom Indexing -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">הצמדה שנתית מותאמת אישית למסלול זה (%)</label>
+                        <input type="number" step="0.1" value="${t.customCpi !== null ? t.customCpi : ''}" oninput="updTrack('${o.id}','${t.id}','customCpi',this.value)" placeholder="השאר ריק לשימוש בהצמדה הכללית: ${S.assumptions.cpi}%" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500">
+                      </div>
+                    </div>
+                    
+                    <!-- Advanced Sub-Tables: Rate changes & prepayments -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <!-- Rate Changes Section -->
+                      <div class="bg-white p-3 rounded-lg border border-slate-200">
+                        <div class="flex justify-between items-center mb-2">
+                          <span class="text-xs font-extrabold text-slate-700">📈 שינויי ריבית עתידיים צפויים (קל"צ/משתנות)</span>
+                          <button onclick="addRateChange('${o.id}','${t.id}')" class="bg-teal-500 hover:bg-teal-600 text-white font-bold text-[10px] px-2 py-1 rounded">
+                            + הוסף שינוי
+                          </button>
+                        </div>
+                        ${(!t.rateChanges || !t.rateChanges.length) ? `
+                          <p class="text-[11px] text-slate-400 text-center py-4">הריבית נשארת קבועה לאורך כל תקופת המסלול.</p>
+                        ` : `
+                          <div class="space-y-2">
+                            ${t.rateChanges.map(rc => `
+                              <div class="flex items-center gap-2">
+                                <span class="text-[11px] text-slate-400">חודש</span>
+                                <input type="number" value="${rc.atMonth}" oninput="updRateChange('${o.id}','${t.id}','${rc.id}','atMonth',this.value)" class="w-16 border rounded text-xs px-1.5 py-0.5 text-center font-semibold">
+                                <span class="text-[11px] text-slate-400">ריבית חדשה (%)</span>
+                                <input type="number" step="0.05" value="${rc.newRate}" oninput="updRateChange('${o.id}','${t.id}','${rc.id}','newRate',this.value)" class="w-16 border rounded text-xs px-1.5 py-0.5 text-center font-semibold">
+                                <button onclick="delRateChange('${o.id}','${t.id}','${rc.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold px-1">✕</button>
+                              </div>
+                            `).join('')}
+                          </div>
+                        `}
+                      </div>
+                      
+                      <!-- Prepayments Section (פירעון מוקדם) -->
+                      <div class="bg-white p-3 rounded-lg border border-slate-200">
+                        <div class="flex justify-between items-center mb-2">
+                          <span class="text-xs font-extrabold text-slate-700">💵 סימולציית פירעון מוקדם חד-פעמי</span>
+                          <button onclick="addPrepayment('${o.id}','${t.id}')" class="bg-teal-500 hover:bg-teal-600 text-white font-bold text-[10px] px-2 py-1 rounded">
+                            + הוסף פירעון מוקדם
+                          </button>
+                        </div>
+                        ${(!t.prepayments || !t.prepayments.length) ? `
+                          <p class="text-[11px] text-slate-400 text-center py-4">לא הוגדרו פירעונות מוקדמים מתוכננים במסלול זה.</p>
+                        ` : `
+                          <div class="space-y-2">
+                            ${t.prepayments.map(p => `
+                              <div class="flex flex-col gap-1 border-b border-slate-100 pb-2 mb-2 last:border-0 last:pb-0">
+                                <div class="flex items-center gap-2">
+                                  <span class="text-[11px] text-slate-400">חודש</span>
+                                  <input type="number" value="${p.month}" oninput="updPrepayment('${o.id}','${t.id}','${p.id}','month',this.value)" class="w-14 border rounded text-xs px-1 py-0.5 text-center font-semibold">
+                                  <span class="text-[11px] text-slate-400">סכום פירעון</span>
+                                  <input type="number" value="${p.amount}" oninput="updPrepayment('${o.id}','${t.id}','${p.id}','amount',this.value)" class="w-24 border rounded text-xs px-1.5 py-0.5 text-center font-semibold">
+                                  <button onclick="delPrepayment('${o.id}','${t.id}','${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold px-1 mr-auto">✕</button>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                  <span class="text-[10px] text-slate-400">שינוי תזרימי:</span>
+                                  <select onchange="updPrepayment('${o.id}','${t.id}','${p.id}','type',this.value)" class="border rounded text-[10px] p-0.5 text-slate-600 font-semibold bg-white">
+                                    <option value="reduce_payment" ${p.type === 'reduce_payment' ? 'selected' : ''}>צמצום החזר חודשי</option>
+                                    <option value="shorten_term" ${p.type === 'shorten_term' ? 'selected' : ''}>קיצור תקופת המשכנתא</option>
+                                  </select>
+                                </div>
+                              </div>
+                            `).join('')}
+                          </div>
+                        `}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+        
+        <!-- Track Action Footer / Add Track -->
+        <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-200 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+          <button onclick="addTrack('${o.id}')" class="bg-white hover:bg-slate-100 text-teal-600 border border-teal-500 hover:border-teal-600 text-xs font-bold px-4 py-2.5 rounded-lg transition-all shadow-sm">
+            ➕ הוסף מסלול לתמהיל
+          </button>
+          
+          <!-- Quick stats at the bottom of the card (repainted in isolation on edits) -->
+          <div id="footer-stats-${o.id}" class="w-full md:w-auto">
+            ${offerFooterStatsHTML(c, tp, ni)}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  
+  renderOffers_amortSelect();
+  renderOffersKpis();
+}
+
+// Footer KPI strip for a single offer card. Pure function of the offer's calc + context.
+function offerFooterStatsHTML(c, tp, ni) {
+  const ltv = tp > 0 ? (c.totalAmount / tp * 100) : 0;
+  const dti = ni > 0 ? (c.monthlyPayment / ni * 100) : 0;
+  const equity = tp - c.totalAmount; // borrower's own capital (down payment)
+  const sDti = ni > 0 ? (c.stressedMonthly / ni * 100) : 0;
+  return `
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 w-full md:w-auto text-center">
+      <div class="bg-white border rounded-lg p-2 min-w-[100px]">
+        <p class="text-[9px] font-bold text-slate-400">החזר חודשי</p>
+        <p class="text-sm font-black text-slate-800">${nis(c.monthlyPayment)}</p>
+      </div>
+      <div class="bg-white border rounded-lg p-2 min-w-[100px]" title="ההחזר ההתחלתי בתרחיש עליית ריבית של ${STRESS_BUMP}% במסלולים המשתנים/פריים">
+        <p class="text-[9px] font-bold text-slate-400">החזר בתרחיש קיצון</p>
+        <p class="text-sm font-bold ${sDti > 40 ? 'text-red-600' : 'text-slate-700'}">${c.stressedMonthly > 0 ? nis(c.stressedMonthly) : '—'}</p>
+      </div>
+      <div class="bg-white border rounded-lg p-2 min-w-[100px]">
+        <p class="text-[9px] font-bold text-slate-400">סך הלוואה</p>
+        <p class="text-sm font-bold text-slate-700">${nis(c.totalAmount)}</p>
+      </div>
+      <div class="bg-white border rounded-lg p-2 min-w-[100px]" title="הון עצמי = שווי הנכסים בניכוי סך ההלוואה">
+        <p class="text-[9px] font-bold text-slate-400">הון עצמי</p>
+        <p class="text-sm font-bold ${tp > 0 && equity < 0 ? 'text-red-600' : 'text-slate-700'}">${tp > 0 ? nis(equity) : '—'}</p>
+      </div>
+      <div class="bg-white border rounded-lg p-2 min-w-[100px]">
+        <p class="text-[9px] font-bold text-slate-400">ריבית ממוצעת</p>
+        <p class="text-sm font-bold text-slate-700">${pct(c.avgRate)}</p>
+      </div>
+      <div class="border rounded-lg p-2 min-w-[100px] ${ltv > 75 ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white text-slate-700'}">
+        <p class="text-[9px] font-bold text-slate-400">שיעור מימון (LTV)</p>
+        <p class="text-sm font-bold">${tp > 0 ? pct(ltv) : '—'}</p>
+      </div>
+      <div class="border rounded-lg p-2 min-w-[100px] ${dti > 40 ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white text-slate-700'}">
+        <p class="text-[9px] font-bold text-slate-400">יחס החזר</p>
+        <p class="text-sm font-bold">${ni > 0 ? pct(dti) : '—'}</p>
+      </div>
+      <div class="bg-white border rounded-lg p-2 min-w-[100px]">
+        <p class="text-[9px] font-bold text-slate-400">עלות כוללת</p>
+        <p class="text-sm font-extrabold text-teal-600">${nis(c.totalPaid)}</p>
+      </div>
+    </div>`;
+}
+
+function renderOffersKpisOnly() { renderOffersKpis(); }
+
+function renderOffersKpis() {
+  const tp = totalProperty(), ni = netIncome();
+  if (!S.offers.length) {
+    document.getElementById('offers-kpis').innerHTML = '';
+    document.getElementById('offers-alerts').innerHTML = '';
+    return;
+  }
+  
+  const calcs = S.offers.map(calcOffer);
+  const best = calcs.reduce((a, b) => b.monthlyPayment > 0 && (a.monthlyPayment === 0 || b.monthlyPayment < a.monthlyPayment) ? b : a, calcs[0]);
+  const cheapestTotal = calcs.reduce((a, b) => b.totalPaid > 0 && (a.totalPaid === 0 || b.totalPaid < a.totalPaid) ? b : a, calcs[0]);
+  
+  document.getElementById('offers-kpis').innerHTML = `
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">מספר הצעות תמהיל</p>
+        <p class="text-2xl font-black text-slate-800">${S.offers.length}</p>
+      </div>
+      <div class="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center text-lg">📁</div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between border-r-4 border-r-emerald-500">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">החזר חודשי נמוך</p>
+        <p class="text-2xl font-black text-emerald-600">${nis(best.monthlyPayment)}</p>
+      </div>
+      <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg">⬇️</div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between border-r-4 border-r-blue-500">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">תמהיל זול (עלות כוללת)</p>
+        <p class="text-2xl font-black text-blue-600">${nis(cheapestTotal.totalPaid)}</p>
+      </div>
+      <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg">📉</div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">שווי נכסים כולל</p>
+        <p class="text-2xl font-black text-slate-800">${nis(tp)}</p>
+      </div>
+      <div class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-lg">🏠</div>
+    </div>`;
+
+  // Dynamic alerts
+  let alerts = [];
+  S.offers.forEach((o, i) => {
+    const c = calcs[i];
+    const ltv = tp > 0 ? c.totalAmount / tp * 100 : 0;
+    const dti = ni > 0 ? c.monthlyPayment / ni * 100 : 0;
+    const prop = S.properties[0];
+    const ltvLimit = prop?.type === 'invest' ? 50 : prop?.type === 'replace' ? 70 : 75;
+    const name = o.bank || 'תמהיל הצעה ' + (i + 1);
+    
+    if (ltv > ltvLimit) {
+      alerts.push({ t: 'red', m: `<strong>${name}</strong>: אחוז מימון מבוקש (${ltv.toFixed(1)}%) חורג מהתקנות המותרות לנכס מסוג זה (${ltvLimit}%).` });
+    }
+    if (dti > 40 && dti <= 50) {
+      alerts.push({ t: 'amber', m: `<strong>${name}</strong>: יחס ההחזר החודשי גבוה (${dti.toFixed(1)}%) וחצה את רף ה‑40% המקובל. מומלץ לשאוף ליחס החזר נמוך יותר (אזור 30%–35%) לשמירה על כרית ביטחון.` });
+    }
+    if (dti > 50) {
+      alerts.push({ t: 'red', m: `<strong>${name}</strong>: יחס ההחזר החודשי חורג באופן קריטי (${dti.toFixed(1)}%). בנק ישראל אינו מאשר מעבר ל-50% יחס החזר.` });
+    }
+
+    // Term cap — Bank of Israel max mortgage term is 30 years (360 months)
+    if (c.maxTerm > 360) {
+      alerts.push({ t: 'red', m: `<strong>${name}</strong>: אחד המסלולים נפרס ל‑${c.maxTerm} חודשים (${(c.maxTerm / 12).toFixed(1)} שנים), מעבר לתקרת 30 השנים (360 חודשים) המותרת בבנק ישראל.` });
+    }
+
+    // Fixed-rate composition — BoI Directive 329 requires at least 1/3 of the loan to be fixed-rate.
+    if (c.totalAmount > 0 && c.fixedShare < (1 / 3) - 0.001) {
+      alerts.push({ t: 'amber', m: `<strong>${name}</strong>: רכיב הריבית הקבועה (קל"צ/ק"צ) עומד על ${(c.fixedShare * 100).toFixed(0)}% בלבד מהתמהיל, מתחת לדרישת בנק ישראל של לפחות שליש (33%) בריבית קבועה. ייתכן שהבנק ידרוש להגדיל את הרכיב הקבוע.` });
+    }
+
+    // Interest-rate stress test — does the offer still pass DTI under a +2% shock on variable tracks?
+    if (ni > 0 && c.stressedMonthly > c.monthlyPayment) {
+      const sDti = c.stressedMonthly / ni * 100;
+      if (sDti > 40) {
+        alerts.push({ t: 'amber', m: `<strong>${name}</strong>: בתרחיש קיצון של עליית ריבית (+${STRESS_BUMP}%) במסלולים המשתנים/פריים, ההחזר ההתחלתי יעלה ל‑${nis(c.stressedMonthly)} ויחס ההחזר יטפס ל‑${sDti.toFixed(1)}%. כדאי לוודא כרית ביטחון או להגדיל את הרכיב הקבוע.` });
+      }
+    }
+
+    // Check if prepayments were set
+    if (c.prepaymentsSum > 0) {
+      alerts.push({ t: 'green', m: `<strong>${name}</strong>: שולבו סימולציות פירעון מוקדם בגובה של ${nis(c.prepaymentsSum)}. לוח הסילוקין הותאם בהתאם לחיסכון בריביות.` });
+    }
+  });
+  
+  if (ni <= 0) alerts.unshift({ t: 'blue', m: 'הזינו את הכנסותיכם בלשונית "הכנסות והתחייבויות" לצורך ניתוח יחס החזר מההכנסה.' });
+  if (tp <= 0) alerts.unshift({ t: 'blue', m: 'הזינו שווי נכס בלשונית "נכסים" כדי לחשב את אחוזי המימון (LTV) הנדרשים.' });
+  
+  document.getElementById('offers-alerts').innerHTML = alerts.length ? `
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+      ${alerts.map(a => {
+        let colors = 'bg-blue-50 border-blue-200 text-blue-800';
+        if (a.t === 'red') colors = 'bg-rose-50 border-rose-200 text-rose-800';
+        if (a.t === 'amber') colors = 'bg-amber-50 border-amber-200 text-amber-800';
+        if (a.t === 'green') colors = 'bg-emerald-50 border-emerald-200 text-emerald-800';
+        return `
+          <div class="flex gap-2 items-start border p-3 rounded-xl text-xs ${colors}">
+            <span class="text-base">${a.t === 'red' ? '🛑' : a.t === 'amber' ? '⚠️' : a.t === 'green' ? '🎉' : 'ℹ️'}</span>
+            <div>${a.m}</div>
+          </div>`;
+      }).join('')}
+    </div>` : '';
+}
+
+/* ═══════════════════ AMORTIZATION ═══════════════════ */
+function renderOffers_amortSelect() {
+  const sel = document.getElementById('amort-select');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = S.offers.map((o, i) => `<option value="${o.id}">${o.bank || 'הצעה ' + (i + 1)}</option>`).join('');
+  if (cur && S.offers.find(o => o.id === cur)) sel.value = cur;
+}
+
+function renderAmort() {
+  renderOffers_amortSelect();
+  const sel = document.getElementById('amort-select');
+  const el = document.getElementById('amort-content');
+  if (!S.offers.length) {
+    el.innerHTML = '<div class="text-slate-400 py-12 text-center">אין הצעות זמינות. אנא הוסיפו הצעה בלשונית "הצעות בנקים".</div>';
+    return;
+  }
+  
+  const offer = S.offers.find(o => o.id === sel.value) || S.offers[0];
+  const c = calcOffer(offer);
+  
+  if (!c.tracks.length) {
+    el.innerHTML = '<div class="text-slate-400 py-12 text-center">אין מסלולים להצעה זו. אנא הוסיפו מסלולים בתפריט ההצעות.</div>';
+    return;
+  }
+  
+  // Year aggregation of schedules
+  const years = Math.ceil(c.maxTerm / 12);
+  let rows = [];
+  
+  for (let y = 1; y <= years; y++) {
+    let pay = 0, prin = 0, int = 0, cpi = 0, prepays = 0, bal = 0;
+    for (let mo = (y - 1) * 12 + 1; mo <= y * 12; mo++) {
+      c.tracks.forEach(t => {
+        const r = t.schedule[mo - 1];
+        if (r) {
+          pay += r.payment; // Includes prepayment
+          prin += r.principal;
+          int += r.interest;
+          cpi += r.cpi;
+          prepays += (r.prepayment || 0);
+        }
+      });
+    }
+    
+    c.tracks.forEach(t => {
+      const idx = Math.min(y * 12 - 1, t.schedule.length - 1);
+      if (t.schedule[idx]) bal += t.schedule[idx].balance;
+    });
+    
+    rows.push({ y, pay, prin, int, cpi, prepays, bal });
+  }
+  
+  const hasCpi = c.totalCpi > 1;
+  const hasPrepays = c.prepaymentsSum > 0;
+  
+  el.innerHTML = `
+    <!-- Amortization Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">החזר חודשי התחלתי</p>
+        <p class="text-lg font-black text-slate-800">${nis(c.monthlyPayment)}</p>
+      </div>
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">סה"כ ריבית משולמת</p>
+        <p class="text-lg font-black text-orange-600">${nis(c.totalInterest)}</p>
+      </div>
+      ${hasCpi ? `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center border-b-4 border-b-pink-500">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">סה"כ הצמדה למדד</p>
+          <p class="text-lg font-black text-pink-600">${nis(c.totalCpi)}</p>
+        </div>` : ''}
+      ${hasPrepays ? `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center border-b-4 border-b-emerald-500">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">פירעונות מוקדמים שבוצעו</p>
+          <p class="text-lg font-black text-emerald-600">${nis(c.prepaymentsSum)}</p>
+        </div>` : ''}
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">סה"כ החזר כולל (מחיר סופי)</p>
+        <p class="text-lg font-black text-teal-600">${nis(c.totalPaid)}</p>
+      </div>
+    </div>
+    
+    <!-- Tracks details table -->
+    <div>
+      <h3 class="text-sm font-bold text-slate-700 mb-3">פרטי המסלולים שנבחרו</h3>
+      <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+            <tr>
+              <th class="py-3 px-4">סוג מסלול</th>
+              <th class="py-3 px-4">סכום הלוואה</th>
+              <th class="py-3 px-4">ריבית התחלתית</th>
+              <th class="py-3 px-4">תקופה (חודשים)</th>
+              <th class="py-3 px-4">החזר חודשי התחלתי</th>
+              <th class="py-3 px-4">ריבית והצמדה מוערכת</th>
+              <th class="py-3 px-4">פירעונות מוקדמים</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-semibold text-slate-700">
+            ${c.tracks.map(t => `
+              <tr class="hover:bg-slate-50/50">
+                <td class="py-3 px-4">
+                  <span class="inline-block w-2.5 h-2.5 rounded-full ml-1" style="background-color: ${TRACK_COLORS[t.type]}"></span>
+                  ${TRACK_TYPES[t.type]}
+                </td>
+                <td class="py-3 px-4 num">${nis(t.amount)}</td>
+                <td class="py-3 px-4 num">${pct(t.rate)}</td>
+                <td class="py-3 px-4 num">${t.termMonths} חודשים</td>
+                <td class="py-3 px-4 num">${nis(t.monthlyPayment)}</td>
+                <td class="py-3 px-4 num">${nis(t.totalInterest + t.totalCpi)}</td>
+                <td class="py-3 px-4 num text-emerald-600">${t.prepaymentsSum > 0 ? nis(t.prepaymentsSum) : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Amortization schedule table -->
+    <div>
+      <h3 class="text-sm font-bold text-slate-700 mb-3">לוח סילוקין שנתי מרוכז</h3>
+      <div class="overflow-x-auto rounded-xl border border-slate-200 max-h-[400px] overflow-y-auto">
+        <table class="w-full text-right text-xs relative">
+          <thead class="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider sticky top-0 z-10">
+            <tr>
+              <th class="py-3 px-4 bg-slate-50">שנה</th>
+              <th class="py-3 px-4 bg-slate-50">החזר שנתי כולל</th>
+              <th class="py-3 px-4 bg-slate-50">החזר ע"ח קרן</th>
+              <th class="py-3 px-4 bg-slate-50">החזר ע"ח ריבית</th>
+              ${hasCpi ? '<th class="py-3 px-4 bg-slate-50">הצמדה שנצברה</th>' : ''}
+              ${hasPrepays ? '<th class="py-3 px-4 bg-slate-50 text-emerald-600">פירעון מוקדם</th>' : ''}
+              <th class="py-3 px-4 bg-slate-50">יתרת חוב לסוף שנה</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-semibold text-slate-600">
+            ${rows.map(r => `
+              <tr class="hover:bg-slate-50/50">
+                <td class="py-3 px-4 font-bold text-slate-900">${r.y}</td>
+                <td class="py-3 px-4 num font-bold text-slate-800">${nis(r.pay)}</td>
+                <td class="py-3 px-4 num text-emerald-600">${nis(r.prin)}</td>
+                <td class="py-3 px-4 num text-orange-600">${nis(r.int)}</td>
+                ${hasCpi ? `<td class="py-3 px-4 num text-pink-600">${nis(r.cpi)}</td>` : ''}
+                ${hasPrepays ? `<td class="py-3 px-4 num text-emerald-600">${r.prepays > 0 ? nis(r.prepays) : '—'}</td>` : ''}
+                <td class="py-3 px-4 num font-bold text-slate-800">${nis(r.bal)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════ SUMMARY & COMPARE ═══════════════════ */
+function renderSummary() {
+  const fbox = document.getElementById('summary-filter');
+  fbox.innerHTML = `
+    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider ml-2">מיון הצעות:</span>
+    <button onclick="setFilter('all')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${S.summaryFilter === 'all' ? 'bg-teal-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">ללא מיון</button>
+    <button onclick="setFilter('monthly')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${S.summaryFilter === 'monthly' ? 'bg-teal-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">לפי החזר חודשי</button>
+    <button onclick="setFilter('total')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${S.summaryFilter === 'total' ? 'bg-teal-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">לפי עלות כוללת</button>
+    <button onclick="setFilter('rate')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${S.summaryFilter === 'rate' ? 'bg-teal-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">לפי ריבית ממוצעת</button>
+  `;
+
+  const el = document.getElementById('summary-table');
+  if (!S.offers.length) {
+    el.innerHTML = '<div class="text-slate-400 py-12 text-center">אין הצעות להשוואה עדיין.</div>';
+    document.getElementById('summary-chart').innerHTML = '';
+    return;
+  }
+  
+  const tp = totalProperty(), ni = netIncome();
+  let list = S.offers.map((o, i) => ({ o, i, c: calcOffer(o) }));
+  
+  if (S.summaryFilter === 'monthly') list.sort((a, b) => (a.c.monthlyPayment || 1e15) - (b.c.monthlyPayment || 1e15));
+  if (S.summaryFilter === 'total') list.sort((a, b) => (a.c.totalPaid || 1e15) - (b.c.totalPaid || 1e15));
+  if (S.summaryFilter === 'rate') list.sort((a, b) => (a.c.avgRate || 1e15) - (b.c.avgRate || 1e15));
+
+  const minMonthly = Math.min(...list.filter(x => x.c.monthlyPayment > 0).map(x => x.c.monthlyPayment));
+  const minTotal = Math.min(...list.filter(x => x.c.totalPaid > 0).map(x => x.c.totalPaid));
+
+  el.innerHTML = `
+    <table class="w-full text-right text-xs">
+      <thead class="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+        <tr>
+          <th class="py-3.5 px-4">שם הבנק / הצעה</th>
+          <th class="py-3.5 px-4">החזר חודשי</th>
+          <th class="py-3.5 px-4">ריבית ממוצעת</th>
+          <th class="py-3.5 px-4">סכום הלוואה</th>
+          <th class="py-3.5 px-4">סך ריבית והצמדה</th>
+          <th class="py-3.5 px-4">עלות סופית כוללת</th>
+          <th class="py-3.5 px-4">שיעור מימון</th>
+          <th class="py-3.5 px-4">יחס החזר</th>
+          <th class="py-3.5 px-4">תקופה מקסימלית</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 font-semibold text-slate-700">
+        ${list.map(({ o, i, c }) => {
+          const ltv = tp > 0 ? c.totalAmount / tp * 100 : 0, dti = ni > 0 ? c.monthlyPayment / ni * 100 : 0;
+          const isBestM = c.monthlyPayment === minMonthly, isBestT = c.totalPaid === minTotal;
+          
+          return `
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-3.5 px-4 font-bold flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${OFFER_COLORS[i % OFFER_COLORS.length]}"></span>
+                ${o.bank || 'הצעה ' + (i + 1)}
+              </td>
+              <td class="py-3.5 px-4 num">
+                <span class="font-extrabold">${nis(c.monthlyPayment)}</span>
+                ${isBestM ? '<span class="mr-1.5 bg-emerald-100 text-emerald-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full">החזר חודשי זול</span>' : ''}
+              </td>
+              <td class="py-3.5 px-4 num">${pct(c.avgRate)}</td>
+              <td class="py-3.5 px-4 num">${nis(c.totalAmount)}</td>
+              <td class="py-3.5 px-4 num text-orange-600">${nis(c.totalInterest + c.totalCpi)}</td>
+              <td class="py-3.5 px-4 num">
+                <span class="font-extrabold text-teal-600">${nis(c.totalPaid)}</span>
+                ${isBestT ? '<span class="mr-1.5 bg-teal-100 text-teal-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full">הכי כלכלי בסה"כ</span>' : ''}
+              </td>
+              <td class="py-3.5 px-4 num ${ltv > 75 ? 'text-red-600 font-bold' : ''}">${tp > 0 ? pct(ltv) : '—'}</td>
+              <td class="py-3.5 px-4 num ${dti > 40 ? 'text-red-600 font-bold' : ''}">${ni > 0 ? pct(dti) : '—'}</td>
+              <td class="py-3.5 px-4 num">${Math.round(c.maxTerm / 12)} שנים</td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  renderChart(list);
+}
+
+function setFilter(f) { S.summaryFilter = f; save(); renderSummary(); }
+
+function renderChart(list) {
+  const box = document.getElementById('summary-chart');
+  const valid = list.filter(x => x.c.monthlyPayment > 0);
+  if (!valid.length) {
+    box.innerHTML = '<div class="text-slate-400 text-center py-12">הוסיפו מסלולים כדי לצפות בגרף התפתחות ההחזרים לאורך השנים.</div>';
+    return;
+  }
+  
+  const maxYears = Math.max(...valid.map(x => Math.ceil(x.c.maxTerm / 12)));
+  const W = Math.max(680, maxYears * 22 + 120), H = 320, padL = 70, padR = 20, padT = 30, padB = 45;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  
+  const series = valid.map(({ o, i, c }) => {
+    const pts = [];
+    const yrs = Math.ceil(c.maxTerm / 12);
+    for (let y = 1; y <= yrs; y++) {
+      let pay = 0, cnt = 0;
+      for (let mo = (y - 1) * 12 + 1; mo <= y * 12; mo++) {
+        let mPay = 0, active = false;
+        c.tracks.forEach(t => {
+          const r = t.schedule[mo - 1];
+          // Use the recurring installment only — a one-off lump-sum prepayment must not
+          // spike the "monthly payment" curve, which represents the ongoing burden.
+          if (r) { mPay += r.regularPayment; active = true; }
+        });
+        if (active) { pay += mPay; cnt++; }
+      }
+      if (cnt > 0) pts.push({ y, v: pay / cnt });
+    }
+    return { name: o.bank || 'הצעה ' + (i + 1), color: OFFER_COLORS[i % OFFER_COLORS.length], pts };
+  });
+  
+  const maxV = Math.max(...series.flatMap(s => s.pts.map(p => p.v))) * 1.1 || 10000;
+  const x = y => padL + ((y - 1) / (maxYears - 1 || 1)) * plotW;
+  const yv = v => padT + plotH - (v / maxV) * plotH;
+  
+  let svg = `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" style="direction: ltr;">`;
+  
+  // Y-axis gridlines
+  for (let g = 0; g <= 4; g++) {
+    const v = maxV * g / 4;
+    const yy = yv(v);
+    svg += `
+      <line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="#f1f5f9" stroke-width="1.5"/>
+      <text x="${padL - 10}" y="${yy + 4}" text-anchor="end" font-size="10" fill="#94a3b8" font-family="Assistant" font-weight="bold">${nis(v)}</text>
+    `;
+  }
+  
+  // X-axis years labels
+  for (let yr = 1; yr <= maxYears; yr += Math.ceil(maxYears / 8)) {
+    svg += `
+      <text x="${x(yr)}" y="${H - padB + 20}" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="Assistant" font-weight="bold">שנה ${yr}</text>
+      <line x1="${x(yr)}" y1="${H - padB}" x2="${x(yr)}" y2="${H - padB + 4}" stroke="#cbd5e1" stroke-width="1.5"/>
+    `;
+  }
+  
+  // Plot paths
+  series.forEach(s => {
+    if (s.pts.length < 1) return;
+    const d = s.pts.map((p, idx) => `${idx === 0 ? 'M' : 'L'}${x(p.y).toFixed(1)},${yv(p.v).toFixed(1)}`).join(' ');
+    
+    svg += `
+      <path d="${d}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      ${s.pts.map(p => `
+        <circle cx="${x(p.y).toFixed(1)}" cy="${yv(p.v).toFixed(1)}" r="4.5" fill="#ffffff" stroke="${s.color}" stroke-width="2.5">
+          <title>${s.name} - שנה ${p.y}: ${nis(p.v)}</title>
+        </circle>
+      `).join('')}
+    `;
+  });
+  
+  svg += `</svg>`;
+  
+  // SVG Legend below the graph
+  const legend = `
+    <div class="flex flex-wrap gap-4 justify-center mt-4">
+      ${series.map(s => `
+        <div class="flex items-center gap-2 text-xs font-bold text-slate-600">
+          <span class="w-4 h-2 rounded" style="background-color: ${s.color};"></span>
+          <span>${s.name}</span>
+        </div>
+      `).join('')}
+    </div>`;
+  
+  box.innerHTML = svg + legend;
+}
+
+/* ═══════════════════ MARKET RATES ═══════════════════ */
+function renderRates() {
+  const nc = document.getElementById('rates-noncpi');
+  nc.innerHTML = ratesTable(S.marketRates.nonCpi, 'nonCpi');
+  document.getElementById('rates-cpi').innerHTML = ratesTable(S.marketRates.cpi, 'cpi');
+  document.getElementById('cpi-assumption').value = S.assumptions.cpi;
+  document.getElementById('prime-assumption').value = S.assumptions.prime;
+}
+
+function ratesTable(arr, key) {
+  return `
+    <table class="w-full text-right text-xs">
+      <thead class="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+        <tr>
+          <th class="py-2 px-3">טווח זמן</th>
+          <th class="py-2 px-3">חודשים</th>
+          <th class="py-2 px-3">ריבית ממוצעת (%)</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 font-semibold text-slate-700">
+        ${arr.map((r, i) => `
+          <tr>
+            <td class="py-2.5 px-3 text-slate-900">${r.period}</td>
+            <td class="py-2.5 px-3 num text-slate-400">${r.min}–${r.max}</td>
+            <td class="py-2.5 px-3">
+              <input type="number" step="0.1" value="${r.rate}" oninput="updRate('${key}',${i},this.value)" class="w-20 border border-slate-200 rounded px-2 py-1 text-center font-bold text-slate-800">
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function updRate(key, i, v) { S.marketRates[key][i].rate = +v || 0; save(); }
+function updateAssumption(k, v) { S.assumptions[k] = +v || 0; save(); }
+
+/* ═══════════════════ ACTIONS ═══════════════════ */
+function resetAll() {
+  S = defaultState();
+  save();
+  renderAll();
+  switchTab('props');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mortgage-advisor-advanced-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+}
+
+/* ═══════════════════ IMPORT ═══════════════════ */
+function sanitizeState(d) {
+  // Merge an untrusted parsed object onto a fresh default, keeping only known shapes.
+  if (!d || typeof d !== 'object') throw new Error('bad');
+  const base = defaultState();
+  const out = Object.assign(base, d);
+  // Minimal structural validation + array guards
+  if (!Array.isArray(out.offers)) throw new Error('offers');
+  out.properties = Array.isArray(out.properties) ? out.properties : base.properties;
+  out.incomes = Array.isArray(out.incomes) ? out.incomes : base.incomes;
+  out.loans = Array.isArray(out.loans) ? out.loans : [];
+  out.offers.forEach(o => {
+    o.id = o.id || uid();
+    o.tracks = Array.isArray(o.tracks) ? o.tracks : [];
+    o.tracks.forEach(t => {
+      t.id = t.id || uid();
+      if (!Array.isArray(t.rateChanges)) t.rateChanges = [];
+      if (!Array.isArray(t.prepayments)) t.prepayments = [];
+    });
+  });
+  if (!out.assumptions || typeof out.assumptions !== 'object') out.assumptions = base.assumptions;
+  if (!out.marketRates || typeof out.marketRates !== 'object') out.marketRates = base.marketRates;
+  return out;
+}
+
+function importData(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      S = sanitizeState(d);
+      save();
+      renderAll();
+      switchTab('offers');
+      openAlertModal('ייבוא הושלם', 'הנתונים נטענו בהצלחה מהקובץ. ניתן להמשיך לערוך ולהשוות את התמהילים.');
+    } catch (err) {
+      openAlertModal('שגיאת ייבוא', 'לא ניתן היה לקרוא את הקובץ. ודאו שמדובר בקובץ JSON תקין שיוצא מהכלי הזה.');
+    }
+    event.target.value = ''; // allow re-importing the same file
+  };
+  reader.onerror = () => {
+    openAlertModal('שגיאת ייבוא', 'אירעה תקלה בקריאת הקובץ. נסו שוב.');
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ═══════════════════ NAMED SCENARIOS ═══════════════════ */
+function loadScenarios() {
+  try {
+    const r = Storage.get(SCEN_KEY);
+    const p = r ? JSON.parse(r) : {};
+    return (p && typeof p === 'object') ? p : {};
+  } catch (e) { return {}; }
+}
+
+function persistScenarios(obj) {
+  try { Storage.set(SCEN_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+
+function saveScenarioPrompt() {
+  const def = 'תמהיל ' + new Date().toLocaleDateString('he-IL');
+  const name = (prompt('שם לתרחיש שמירה:', def) || '').trim();
+  if (!name) return;
+  const all = loadScenarios();
+  const exists = !!all[name];
+  const doSave = () => {
+    all[name] = { savedAt: new Date().toISOString(), state: JSON.parse(JSON.stringify(S)) };
+    persistScenarios(all);
+    renderScenarios();
+  };
+  if (exists) {
+    openConfirmModal('דריסת תרחיש', `כבר קיים תרחיש בשם "${name}". לשמור עליו מחדש?`, doSave);
+  } else {
+    doSave();
+  }
+}
+
+function applyScenario(name) {
+  const all = loadScenarios();
+  const sc = all[name];
+  if (!sc || !sc.state) return;
+  openConfirmModal('טעינת תרחיש', `לטעון את התרחיש "${name}"? הנתונים הנוכחיים שעל המסך יוחלפו (תרחישים שמורים אחרים יישארו).`, () => {
+    try {
+      S = sanitizeState(sc.state);
+      save();
+      renderAll();
+      switchTab('offers');
+    } catch (e) {
+      openAlertModal('שגיאה', 'לא ניתן לטעון את התרחיש.');
+    }
+  });
+}
+
+function deleteScenario(name) {
+  openConfirmModal('מחיקת תרחיש', `למחוק את התרחיש השמור "${name}"? פעולה זו אינה הפיכה.`, () => {
+    const all = loadScenarios();
+    delete all[name];
+    persistScenarios(all);
+    renderScenarios();
+  });
+}
+
+function renderScenarios() {
+  const el = document.getElementById('scenarios-card');
+  if (!el) return;
+  const all = loadScenarios();
+  const names = Object.keys(all).sort((a, b) => (all[b].savedAt || '').localeCompare(all[a].savedAt || ''));
+
+  const chips = names.length ? names.map(n => {
+    const when = all[n].savedAt ? new Date(all[n].savedAt).toLocaleDateString('he-IL') : '';
+    const cnt = (all[n].state && Array.isArray(all[n].state.offers)) ? all[n].state.offers.length : 0;
+    return `
+      <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+        <button onclick="applyScenario('${n.replace(/'/g, "\\'")}')" class="text-right group">
+          <span class="block text-sm font-bold text-slate-800 group-hover:text-teal-600 transition-colors">${escapeHtml(n)}</span>
+          <span class="block text-[11px] text-slate-400">${cnt} תמהילים · ${when}</span>
+        </button>
+        <button onclick="deleteScenario('${n.replace(/'/g, "\\'")}')" title="מחיקה" class="text-slate-300 hover:text-rose-500 text-sm transition-colors">✕</button>
+      </div>`;
+  }).join('') : '<p class="text-sm text-slate-400">עדיין לא נשמרו תרחישים. שמרו את מצב העבודה הנוכחי כדי לחזור אליו בקלות או להשוות מול גרסאות אחרות.</p>';
+
+  el.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">🗂️ תרחישים שמורים</h2>
+          <p class="text-xs text-slate-500 mt-0.5">שמרו גרסאות של תמהילי המשכנתא והשוו ביניהן, או צרו קישור לשיתוף.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="saveScenarioPrompt()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">💾 שמירת תרחיש נוכחי</button>
+          <button onclick="copyShareLink()" class="bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 rounded-xl text-sm transition-all border border-slate-200 flex items-center gap-2">🔗 קישור שיתוף</button>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">${chips}</div>
+    </div>`;
+}
+
+/* ═══════════════════ SHAREABLE LINK ═══════════════════ */
+function encodeState(obj) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+}
+function decodeState(str) {
+  return JSON.parse(decodeURIComponent(escape(atob(str))));
+}
+
+function copyShareLink() {
+  try {
+    const hash = '#data=' + encodeState(S);
+    const url = location.origin + location.pathname + hash;
+    const finish = () => openAlertModal('קישור שיתוף מוכן', 'הקישור הועתק. כל מי שיפתח אותו יראה את אותם תמהילים ונתונים (הקישור מכיל את הנתונים עצמם, ללא שמירה בשרת).');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(finish, () => { promptCopyFallback(url); });
+    } else {
+      promptCopyFallback(url);
+    }
+  } catch (e) {
+    openAlertModal('שגיאה', 'לא ניתן היה ליצור קישור שיתוף.');
+  }
+}
+
+function promptCopyFallback(url) {
+  prompt('העתיקו את הקישור לשיתוף:', url);
+}
+
+function loadFromHash() {
+  try {
+    const m = (location.hash || '').match(/[#&]data=([^&]+)/);
+    if (!m) return false;
+    const incoming = sanitizeState(decodeState(m[1]));
+    // Defer to a confirm so we don't silently overwrite a returning user's local data
+    openConfirmModal('טעינת נתונים מקישור', 'הקישור מכיל נתוני תמהיל משותפים. לטעון אותם? (הנתונים הקיימים אצלכם יוחלפו על המסך).', () => {
+      S = incoming;
+      save();
+      renderAll();
+      switchTab('offers');
+      history.replaceState(null, '', location.pathname + location.search);
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ═══════════════════ HELPERS ═══════════════════ */
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ═══════════════════ INIT ═══════════════════ */
+function renderAll() {
+  renderProps();
+  renderIncome();
+  renderOffers();
+  renderScenarios();
+}
+
+/* App bootstrap: surface storage status, honour share-links, then render. */
+function initApp() {
+  try {
+    const banner = document.getElementById('storage-banner');
+    if (banner && Storage.available === false) banner.classList.remove('hidden');
+  } catch (e) {}
+  renderAll();
+  try { loadFromHash(); } catch (e) {}
+}
+initApp();
+</script>
+</body>
+</html>

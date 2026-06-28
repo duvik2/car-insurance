@@ -239,9 +239,41 @@
       </div>
       
       <div id="props-list" class="space-y-4 mb-6"></div>
-      
+
       <button onclick="addProperty()" class="btn btn-ghost" style="color:#0a5a5d;border-color:#5eead4;">
         ➕ הוסף נכס חדש
+      </button>
+    </div>
+
+    <!-- EQUITY CARD -->
+    <div class="app-card p-6 sm:p-7">
+      <div class="border-b border-slate-100 pb-4 mb-6">
+        <h2 class="text-xl font-bold text-slate-900">💰 הון עצמי ומשכנתא רצויה</h2>
+        <p class="text-sm text-slate-500 mt-1">הזינו את ההון העצמי (המזומן) שברשותכם. המשכנתא הרצויה מחושבת אוטומטית: שווי הנכסים בניכוי ההון העצמי, ומשמשת כברירת מחדל לתמהילים חדשים.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">הון עצמי (₪)</label>
+          <input type="number" id="equity-input" oninput="updEquity(this.value)" placeholder="לדוגמה: 500,000" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all font-bold">
+          <p id="equity-hint" class="text-[11px] font-semibold text-slate-400 mt-1.5 h-3"></p>
+        </div>
+
+        <div class="rounded-xl p-4 border" style="background:linear-gradient(135deg,#f0fdfa,#ecfeff);border-color:#99f6e4;">
+          <p class="eyebrow mb-1.5">משכנתא רצויה</p>
+          <p id="desired-mortgage-val" class="text-2xl font-black gradient-text num">—</p>
+          <p class="text-[11px] font-semibold text-slate-500 mt-1.5">שווי נכסים − הון עצמי</p>
+        </div>
+
+        <div id="desired-ltv-box" class="rounded-xl p-4 border bg-white border-slate-200">
+          <p class="eyebrow mb-1.5">שיעור מימון (LTV) למשכנתא הרצויה</p>
+          <p id="desired-ltv-val" class="text-2xl font-black text-slate-800 num">—</p>
+          <p id="desired-ltv-note" class="text-[11px] font-semibold text-slate-500 mt-1.5">&nbsp;</p>
+        </div>
+      </div>
+
+      <button onclick="addOffer(); switchTab('offers');" class="btn btn-primary mt-6">
+        🏦 צור תמהיל למשכנתא הרצויה (40/40/20)
       </button>
     </div>
   </div>
@@ -446,16 +478,18 @@ const OFFER_COLORS = ['#0d7377', '#ff8c42', '#3b82f6', '#8b5cf6', '#10b981', '#e
 
 const defaultState = () => ({
   properties: [{ id: uid(), city: '', value: 1500000, type: 'first' }],
+  equity: 500000, // הון עצמי של הלקוח (מזומן) — המשכנתא הרצויה = שווי נכסים − הון עצמי
   incomes: [{ id: uid(), source: 'משכורת ראשית', amount: 15000 }],
   loans: [],
   offers: [
     {
       id: uid(),
       bank: 'הצעה 1 - לדוגמה',
+      // ברירת מחדל: המשכנתא הרצויה (1,500,000 − 500,000 = 1,000,000) בחלוקה 40% קל"צ / 40% פריים / 20% משתנה צמוד, ל‑25 שנה
       tracks: [
-        { id: uid(), type: 'FIXED', amount: 400000, rate: 4.8, termMonths: 240, customCpi: null, rateChanges: [], prepayments: [] },
-        { id: uid(), type: 'PRIME', amount: 300000, rate: 5.5, termMonths: 300, customCpi: null, rateChanges: [], prepayments: [] },
-        { id: uid(), type: 'VARIABLE_CPI', amount: 300000, rate: 3.5, termMonths: 300, customCpi: null, rateChanges: [], prepayments: [] }
+        { id: uid(), type: 'FIXED', amount: 400000, rate: 5.5, termMonths: 300, customCpi: null, rateChanges: [], prepayments: [] },
+        { id: uid(), type: 'PRIME', amount: 400000, rate: 5.5, termMonths: 300, customCpi: null, rateChanges: [], prepayments: [] },
+        { id: uid(), type: 'VARIABLE_CPI', amount: 200000, rate: 3.9, termMonths: 300, customCpi: null, rateChanges: [], prepayments: [] }
       ]
     }
   ],
@@ -484,6 +518,23 @@ const defaultState = () => ({
 let S = loadState();
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
+
+/* Desired mortgage = total property value minus the borrower's own equity (never below 0). */
+function desiredMortgage() { return Math.max(totalProperty() - (+S.equity || 0), 0); }
+
+/* Suggested rate that is safe to call even before `S` is initialised (TDZ during defaultState). */
+function safeRate(type, term) {
+  try { return suggestRate(type, term); }
+  catch (e) { return type === 'PRIME' ? 5.5 : (type.includes('CPI') ? 3.9 : 5.5); }
+}
+
+/* Build the default 40% קל"צ / 40% פריים / 20% משתנה־צמוד split (25 years) for a given total. */
+function splitTracks(total) {
+  total = Math.max(0, Math.round(+total || 0));
+  const a = Math.round(total * 0.4), b = Math.round(total * 0.4), c = total - a - b;
+  const mk = (type, amount, term) => ({ id: uid(), type, amount, rate: safeRate(type, term), termMonths: term, customCpi: null, rateChanges: [], prepayments: [] });
+  return [mk('FIXED', a, 300), mk('PRIME', b, 300), mk('VARIABLE_CPI', c, 300)];
+}
 
 function loadState() {
   try {
@@ -847,9 +898,55 @@ function kpiCard(label, value, icon, tone = 'teal', opts = {}) {
 }
 
 function renderPropsKpis() {
+  const tp = totalProperty(), dm = desiredMortgage();
+  const ltv = tp > 0 ? (dm / tp * 100) : 0;
   document.getElementById('props-kpis').innerHTML =
-    kpiCard('שווי נכסים כולל', nis(totalProperty()), '🏠', 'teal') +
-    kpiCard('מספר נכסים', S.properties.length, '📊', 'blue');
+    kpiCard('שווי נכסים כולל', nis(tp), '🏠', 'teal') +
+    kpiCard('הון עצמי', nis(+S.equity || 0), '💰', 'emerald', { valueClass: 'text-emerald-600' }) +
+    kpiCard('משכנתא רצויה', nis(dm), '🏦', 'blue', { valueClass: 'text-blue-600', sub: tp > 0 ? ('שיעור מימון ' + pct(ltv)) : '' });
+  renderEquityDerived();
+}
+
+/* Equity card — sets the input value (full render) and the derived figures. */
+function renderEquity() {
+  const inp = document.getElementById('equity-input');
+  if (inp && document.activeElement !== inp) inp.value = (+S.equity || 0) ? (+S.equity || 0) : '';
+  renderEquityDerived();
+}
+
+/* Live update of the desired-mortgage / LTV figures without touching focused inputs. */
+function renderEquityDerived() {
+  const tp = totalProperty(), eq = +S.equity || 0, dm = desiredMortgage();
+  const hint = document.getElementById('equity-hint');
+  if (hint) hint.textContent = eq > 0 ? nis(eq) : '';
+  const dmEl = document.getElementById('desired-mortgage-val');
+  if (dmEl) dmEl.textContent = nis(dm);
+
+  const ltvEl = document.getElementById('desired-ltv-val');
+  const noteEl = document.getElementById('desired-ltv-note');
+  const box = document.getElementById('desired-ltv-box');
+  if (!ltvEl) return;
+  if (tp > 0) {
+    const ltv = dm / tp * 100;
+    const prop = S.properties[0];
+    const cap = prop?.type === 'invest' ? 50 : prop?.type === 'replace' ? 70 : 75;
+    const over = ltv > cap;
+    ltvEl.textContent = pct(ltv);
+    ltvEl.className = 'text-2xl font-black num ' + (over ? 'text-rose-600' : 'text-slate-800');
+    if (noteEl) noteEl.textContent = over ? `חריגה מתקרת ${cap}% — נדרש הון עצמי גבוה יותר` : `תקרת מימון לנכס: ${cap}%`;
+    if (box) box.style.cssText = over ? 'background:#fff1f2;border:1px solid #fecdd3;' : 'background:#fff;border:1px solid #e2e8f0;';
+  } else {
+    ltvEl.textContent = '—';
+    ltvEl.className = 'text-2xl font-black text-slate-800 num';
+    if (noteEl) noteEl.innerHTML = '&nbsp;';
+    if (box) box.style.cssText = 'background:#fff;border:1px solid #e2e8f0;';
+  }
+}
+
+function updEquity(v) {
+  S.equity = Math.max(0, +v || 0);
+  save();
+  renderPropsKpis(); // also refreshes the equity-derived figures
 }
 
 /* ═══════════════════ INCOME & LOANS ═══════════════════ */
@@ -914,7 +1011,10 @@ function renderIncomeKpis() {
 
 /* ═══════════════════ OFFERS ═══════════════════ */
 function addOffer() {
-  S.offers.push({ id: uid(), bank: '', tracks: [newTrack()] });
+  // Pre-fill with the desired mortgage split (40/40/20, 25y). Fall back to ₪1,000,000
+  // when no property/equity is set yet, so the new offer is immediately usable.
+  const base = desiredMortgage() > 0 ? desiredMortgage() : 1000000;
+  S.offers.push({ id: uid(), bank: '', tracks: splitTracks(base) });
   save();
   renderOffers();
 }
@@ -1774,6 +1874,7 @@ function sanitizeState(d) {
   out.properties = Array.isArray(out.properties) ? out.properties : base.properties;
   out.incomes = Array.isArray(out.incomes) ? out.incomes : base.incomes;
   out.loans = Array.isArray(out.loans) ? out.loans : [];
+  if (typeof out.equity !== 'number' || !isFinite(out.equity) || out.equity < 0) out.equity = 0;
   out.offers.forEach(o => {
     o.id = o.id || uid();
     o.tracks = Array.isArray(o.tracks) ? o.tracks : [];
@@ -1955,6 +2056,7 @@ function escapeHtml(s) {
 /* ═══════════════════ INIT ═══════════════════ */
 function renderAll() {
   renderProps();
+  renderEquity();
   renderIncome();
   renderOffers();
   renderScenarios();

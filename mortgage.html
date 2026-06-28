@@ -52,70 +52,142 @@
   }
 </script>
 <style>
+  /* ============ DESIGN TOKENS ============ */
+  :root{
+    --brand-400:#14a3a8; --brand-500:#0d7377; --brand-600:#0a5a5d; --brand-700:#08484a;
+    --accent-500:#ff8c42; --accent-600:#e8732a;
+    --ink:#0b2228;
+    --ring: rgba(13,115,119,.32);
+    --shadow-sm: 0 1px 2px rgba(15,23,42,.04), 0 2px 6px rgba(15,23,42,.05);
+    --shadow-md: 0 14px 34px -18px rgba(15,23,42,.28);
+    --shadow-lg: 0 30px 60px -28px rgba(13,115,119,.4);
+  }
+
   body {
     font-family: 'Assistant', sans-serif;
     -webkit-font-smoothing: antialiased;
+    color:#1e293b;
+    background:
+      radial-gradient(1100px 600px at 100% -8%, rgba(13,115,119,.08), transparent 60%),
+      radial-gradient(900px 520px at -8% 4%, rgba(255,140,66,.06), transparent 55%),
+      linear-gradient(180deg,#f7f9fb 0%, #eef2f5 100%);
+    background-attachment: fixed;
   }
   h1, h2, h3, h4 {
     font-family: 'Heebo', sans-serif;
+    letter-spacing:-.012em;
   }
-  /* Custom scrollbar for better styling */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border:2px solid transparent; background-clip:padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip:padding-box; }
+
+  .num { font-variant-numeric: tabular-nums; }
+  .gradient-text{
+    background:linear-gradient(95deg,#0d7377,#13a3a8 60%,#0a5a5d);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+
+  /* ============ SURFACES ============ */
+  .app-card{
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(10px);
+    border:1px solid rgba(226,232,240,.9);
+    border-radius:1.4rem;
+    box-shadow: var(--shadow-sm);
   }
-  ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
+
+  /* ============ KPI CARDS ============ */
+  .kpi{
+    position:relative; overflow:hidden;
+    background:linear-gradient(180deg,#ffffff, #fbfdfd);
+    border:1px solid rgba(226,232,240,.9);
+    border-radius:1.25rem;
+    box-shadow:var(--shadow-sm);
+    transition: transform .24s cubic-bezier(.2,.7,.2,1), box-shadow .24s ease;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+  .kpi:hover{ transform:translateY(-4px); box-shadow:var(--shadow-md); }
+  .kpi::before{
+    content:''; position:absolute; inset:0 auto 0 0; width:4px;
+    background:linear-gradient(180deg,var(--brand-500),var(--accent-500));
+    opacity:0; transition:opacity .22s ease;
   }
-  .num {
-    font-variant-numeric: tabular-nums;
+  .kpi:hover::before{ opacity:.95; }
+  .icon-chip{
+    width:2.85rem; height:2.85rem; border-radius:1rem; flex:none;
+    display:flex; align-items:center; justify-content:center; font-size:1.2rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.65), 0 8px 18px -10px rgba(15,23,42,.35);
   }
-  /* Smooth fade-in when switching tabs (premium SaaS feel) */
-  .tab-content:not(.hidden) {
-    animation: tabFade 0.28s ease-out;
-  }
-  @keyframes tabFade {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  /* Subtle lift on offer/KPI cards */
-  .lift { transition: box-shadow .2s ease, transform .2s ease; }
-  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -12px rgba(15,23,42,.18); }
-  @media (prefers-reduced-motion: reduce) {
-    .tab-content:not(.hidden) { animation: none; }
-    .lift:hover { transform: none; }
+  .eyebrow{ font-size:.66rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#94a3b8; }
+
+  /* ============ BUTTONS ============ */
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+    font-weight:700; border-radius:.85rem; padding:.62rem 1.1rem; font-size:.875rem;
+    transition:transform .16s ease, box-shadow .16s ease, filter .16s ease, background .16s ease;
+    cursor:pointer; border:1px solid transparent; line-height:1; }
+  .btn:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--ring); }
+  .btn-primary{ color:#fff; background:linear-gradient(180deg,#0e8589,#0a5a5d);
+    box-shadow:0 12px 24px -14px rgba(13,115,119,.85); }
+  .btn-primary:hover{ filter:brightness(1.06); transform:translateY(-1px); box-shadow:0 18px 32px -16px rgba(13,115,119,.9); }
+  .btn-accent{ color:#fff; background:linear-gradient(180deg,#ffa05f,#e8732a);
+    box-shadow:0 12px 24px -14px rgba(232,115,42,.8); }
+  .btn-accent:hover{ filter:brightness(1.05); transform:translateY(-1px); }
+  .btn-ghost{ background:rgba(255,255,255,.75); border-color:rgba(226,232,240,.95); color:#334155; }
+  .btn-ghost:hover{ background:#fff; border-color:#cbd5e1; transform:translateY(-1px); }
+  .btn-glass{ background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.24); color:#fff; backdrop-filter:blur(8px); }
+  .btn-glass:hover{ background:rgba(255,255,255,.26); }
+
+  /* ============ PILL TABS ============ */
+  .tab-btn{ position:relative; display:inline-flex; align-items:center; gap:.45rem; white-space:nowrap;
+    padding:.55rem 1.05rem; border-radius:.85rem; font-size:.875rem; font-weight:600; color:#64748b;
+    transition:color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease; }
+  .tab-btn:hover{ color:#0f172a; background:rgba(13,115,119,.07); }
+  .tab-btn.active{ color:#fff; background:linear-gradient(180deg,#0e8589,#0a5a5d); font-weight:800;
+    box-shadow:0 12px 22px -12px rgba(13,115,119,.7); transform:translateY(-1px); }
+
+  /* ============ INPUTS ============ */
+  input, select, textarea{ transition:box-shadow .15s ease, border-color .15s ease; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible{ outline:none; }
+
+  /* ============ ANIMATIONS ============ */
+  .tab-content:not(.hidden){ animation: tabFade 0.32s cubic-bezier(.2,.7,.2,1); }
+  @keyframes tabFade{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
+  .lift{ transition: box-shadow .24s ease, transform .24s cubic-bezier(.2,.7,.2,1); }
+  .lift:hover{ transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  @keyframes floatIn{ from{ opacity:0; transform:translateY(10px) scale(.99);} to{ opacity:1; transform:none;} }
+
+  @media (prefers-reduced-motion: reduce){
+    .tab-content:not(.hidden){ animation:none; }
+    .lift:hover, .kpi:hover, .btn:hover, .tab-btn.active{ transform:none; }
   }
 </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<body class="text-slate-800 min-h-screen flex flex-col">
 
 <!-- HEADER -->
-<header class="bg-gradient-to-r from-teal-700 via-teal-600 to-teal-800 text-white shadow-lg border-b border-teal-900/30">
-  <div class="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+<header class="relative text-white overflow-hidden" style="background:linear-gradient(120deg,#08484a 0%, #0a5a5d 45%, #0d7377 100%);">
+  <!-- decorative glow -->
+  <div class="pointer-events-none absolute inset-0 opacity-70" style="background:radial-gradient(600px 280px at 92% -30%, rgba(255,140,66,.35), transparent 60%), radial-gradient(700px 320px at 8% 130%, rgba(20,163,168,.45), transparent 60%);"></div>
+  <div class="relative max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
     <div class="flex items-center gap-4">
-      <div class="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center text-2xl shadow-inner transform hover:rotate-6 transition-transform duration-300">
+      <div class="w-14 h-14 bg-white/12 backdrop-blur-md border border-white/25 rounded-2xl flex items-center justify-center text-3xl shadow-inner transform hover:rotate-6 hover:scale-105 transition-transform duration-300">
         🏠
       </div>
       <div>
-        <h1 class="text-2xl font-extrabold tracking-tight">יועץ משכנתאות חכם</h1>
-        <p class="text-teal-100/90 text-sm mt-0.5">ניתוח והשוואת הצעות · לוחות סילוקין מתקדמים · סימולציות פירעון והצמדה</p>
+        <h1 class="text-2xl sm:text-[1.7rem] font-black tracking-tight leading-none">יועץ משכנתאות חכם</h1>
+        <p class="text-teal-50/85 text-sm mt-1.5 font-medium">ניתוח והשוואת הצעות · לוחות סילוקין מתקדמים · סימולציות פירעון והצמדה</p>
       </div>
     </div>
-    <div class="flex items-center gap-3">
-      <button onclick="openConfirmModal('איפוס כל הנתונים', 'האם אתה בטוח שברצונך למחוק את כל הנתונים שהזנת? פעולה זו אינה הפיכה.', resetAll)" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border border-white/10 shadow-sm">
-        🗑️ איפוס
+    <div class="flex items-center gap-2.5">
+      <button onclick="openConfirmModal('איפוס כל הנתונים', 'האם אתה בטוח שברצונך למחוק את כל הנתונים שהזנת? פעולה זו אינה הפיכה.', resetAll)" class="btn btn-glass">
+        🗑️ <span class="hidden sm:inline">איפוס</span>
       </button>
-      <button onclick="document.getElementById('import-file-input').click()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border border-white/10 shadow-sm">
-        📂 ייבוא נתונים
+      <button onclick="document.getElementById('import-file-input').click()" class="btn btn-glass">
+        📂 <span class="hidden sm:inline">ייבוא נתונים</span>
       </button>
-      <button onclick="exportData()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+      <button onclick="exportData()" class="btn btn-accent">
         💾 ייצוא נתונים
       </button>
       <input type="file" id="import-file-input" accept="application/json,.json" class="hidden" onchange="importData(event)">
@@ -124,25 +196,25 @@
 </header>
 
 <!-- TABS NAVIGATION -->
-<div class="bg-white shadow-sm sticky top-0 z-30 border-b border-slate-200">
+<div class="sticky top-0 z-30 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl shadow-sm">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <nav class="flex gap-2 py-3 overflow-x-auto" aria-label="Tabs">
-      <button onclick="switchTab('props')" data-tab="props" class="tab-btn active px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all bg-teal-500 text-white shadow-md shadow-teal-500/10">
+    <nav class="flex gap-1.5 py-3 overflow-x-auto" aria-label="Tabs">
+      <button onclick="switchTab('props')" data-tab="props" class="tab-btn active">
         <span>🏘️</span> נכסים
       </button>
-      <button onclick="switchTab('income')" data-tab="income" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+      <button onclick="switchTab('income')" data-tab="income" class="tab-btn">
         <span>💵</span> הכנסות והתחייבויות
       </button>
-      <button onclick="switchTab('offers')" data-tab="offers" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+      <button onclick="switchTab('offers')" data-tab="offers" class="tab-btn">
         <span>🏦</span> הצעות בנקים וסימולציה
       </button>
-      <button onclick="switchTab('amort')" data-tab="amort" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+      <button onclick="switchTab('amort')" data-tab="amort" class="tab-btn">
         <span>📋</span> לוח סילוקין מפורט
       </button>
-      <button onclick="switchTab('summary')" data-tab="summary" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+      <button onclick="switchTab('summary')" data-tab="summary" class="tab-btn">
         <span>📊</span> השוואת תמהילים
       </button>
-      <button onclick="switchTab('rates')" data-tab="rates" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all">
+      <button onclick="switchTab('rates')" data-tab="rates" class="tab-btn">
         <span>📈</span> ריביות שוק והנחות עבודה
       </button>
     </nav>
@@ -158,7 +230,7 @@
     <div id="props-kpis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     
     <!-- Card -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="app-card p-6 sm:p-7">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
         <div>
           <h2 class="text-xl font-bold text-slate-900">🏘️ שווי נכסים לרכישה</h2>
@@ -168,7 +240,7 @@
       
       <div id="props-list" class="space-y-4 mb-6"></div>
       
-      <button onclick="addProperty()" class="bg-white hover:bg-slate-50 text-teal-600 border border-teal-600 hover:border-teal-700 font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+      <button onclick="addProperty()" class="btn btn-ghost" style="color:#0a5a5d;border-color:#5eead4;">
         ➕ הוסף נכס חדש
       </button>
     </div>
@@ -180,25 +252,25 @@
     <div id="income-kpis" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
     
     <!-- Incomes -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="app-card p-6 sm:p-7">
       <div class="border-b border-slate-100 pb-4 mb-6">
         <h2 class="text-xl font-bold text-slate-900">💵 הכנסות המשפחה (נטו חודשי)</h2>
         <p class="text-sm text-slate-500 mt-1">ההכנסות המשמשות לחישוב יחס ההחזר המקסימלי המאושר בבנק.</p>
       </div>
       <div id="income-list" class="space-y-4 mb-6"></div>
-      <button onclick="addIncome()" class="bg-white hover:bg-slate-50 text-teal-600 border border-teal-600 font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+      <button onclick="addIncome()" class="btn btn-ghost" style="color:#0a5a5d;border-color:#5eead4;">
         ➕ הוסף מקור הכנסה
       </button>
     </div>
 
     <!-- Existing Loans -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="app-card p-6 sm:p-7">
       <div class="border-b border-slate-100 pb-4 mb-6">
         <h2 class="text-xl font-bold text-slate-900">💳 הלוואות והתחייבויות קיימות</h2>
         <p class="text-sm text-slate-500 mt-1">החזרים חודשיים שיתרתם עולה על 18 חודשים (יופחתו מההכנסה הכוללת לצורך חישוב כושר ההחזר).</p>
       </div>
       <div id="loans-list" class="space-y-4 mb-6"></div>
-      <button onclick="addLoan()" class="bg-white hover:bg-slate-50 text-teal-600 border border-teal-600 font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">
+      <button onclick="addLoan()" class="btn btn-ghost" style="color:#0a5a5d;border-color:#5eead4;">
         ➕ הוסף התחייבות/הלוואה
       </button>
     </div>
@@ -220,13 +292,13 @@
     <div id="offers-alerts" class="space-y-2"></div>
     
     <!-- Offers List -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="app-card p-6 sm:p-7">
       <div class="border-b border-slate-100 pb-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-bold text-slate-900">🏦 הצעות מבנקים ותמהילים</h2>
           <p class="text-sm text-slate-500 mt-1">הגדירו הצעות תמהיל שונות. לכל מסלול ניתן להגדיר שינויי ריבית עתידיים או פירעונות מוקדמים בהגדרות המתקדמות.</p>
         </div>
-        <button onclick="addOffer()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-md flex items-center gap-2">
+        <button onclick="addOffer()" class="btn btn-primary">
           ➕ הוסף תמהיל הצעה חדש
         </button>
       </div>
@@ -237,7 +309,7 @@
 
   <!-- ================= AMORTIZATION TAB ================= -->
   <div id="tab-amort" class="tab-content hidden space-y-6">
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="app-card p-6 sm:p-7">
       <div class="border-b border-slate-100 pb-4 mb-6">
         <h2 class="text-xl font-bold text-slate-900">📋 לוח סילוקין שנתווסף ומסלולים</h2>
         <p class="text-sm text-slate-500 mt-1">השפעות הריבית, ההצמדה למדד, ופירעונות מוקדמים מפורטים כאן לפי שנים.</p>
@@ -254,7 +326,7 @@
 
   <!-- ================= SUMMARY TAB ================= -->
   <div id="tab-summary" class="tab-content hidden space-y-6">
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="app-card p-6 sm:p-7">
       <div class="border-b border-slate-100 pb-4 mb-6">
         <h2 class="text-xl font-bold text-slate-900">📊 השוואה מלאה של תמהילי המשכנתא</h2>
         <p class="text-sm text-slate-500 mt-1">סקירה מרוכזת של הנתונים הפיננסיים והעלויות הסופיות לצד המדדים העיקריים.</p>
@@ -267,7 +339,7 @@
       </div>
     </div>
     
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="app-card p-6 sm:p-7">
       <div class="border-b border-slate-100 pb-4 mb-6">
         <h2 class="text-xl font-bold text-slate-900">📈 התפתחות ההחזר החודשי לאורך השנים</h2>
         <p class="text-sm text-slate-500 mt-1">גרף התקדמות הממחיש את השפעת פירעונות מוקדמים, מדדים ושינויי ריבית צפויים.</p>
@@ -279,20 +351,20 @@
   <!-- ================= RATES TAB ================= -->
   <div id="tab-rates" class="tab-content hidden space-y-6">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="app-card p-6 sm:p-7">
         <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4">📈 ריביות שוק לא צמודות (בנק ישראל)</h3>
         <p class="text-xs text-slate-500 mb-4">טווח ריביות ממוצעות המשמשות כהמלצה ראשונית למסלולים שאינם צמודים.</p>
         <div id="rates-noncpi" class="overflow-x-auto"></div>
       </div>
       
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div class="app-card p-6 sm:p-7">
         <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4">📊 ריביות שוק צמודות מדד</h3>
         <p class="text-xs text-slate-500 mb-4">טווח ריביות ממוצעות המשמשות כהמלצה ראשונית למסלולים צמודי מדד.</p>
         <div id="rates-cpi" class="overflow-x-auto"></div>
       </div>
     </div>
     
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="app-card p-6 sm:p-7">
       <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4">⚙️ הנחות עבודה כלליות של המערכת</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -327,8 +399,8 @@
       <p id="modal-message" class="text-sm text-slate-600 leading-relaxed">הודעת מודאל מפורטת כאן.</p>
     </div>
     <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3">
-      <button id="modal-cancel" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all">ביטול</button>
-      <button id="modal-confirm" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all">אישור</button>
+      <button id="modal-cancel" class="btn btn-ghost">ביטול</button>
+      <button id="modal-confirm" class="btn btn-accent">אישור</button>
     </div>
   </div>
 </div>
@@ -672,11 +744,7 @@ function netIncome() { return totalIncome() - totalLoans(); }
 /* ═══════════════════ TABS ═══════════════════ */
 function switchTab(t) {
   document.querySelectorAll('.tab-btn').forEach(b => {
-    if (b.dataset.tab === t) {
-      b.className = "tab-btn px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all bg-teal-500 text-white shadow-md shadow-teal-500/10";
-    } else {
-      b.className = "tab-btn px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2 whitespace-nowrap transition-all";
-    }
+    b.classList.toggle('active', b.dataset.tab === t);
   });
   
   document.querySelectorAll('.tab-content').forEach(x => {
@@ -754,23 +822,34 @@ function renderProps() {
   renderPropsKpis();
 }
 
-function renderPropsKpis() {
-  const tot = totalProperty();
-  document.getElementById('props-kpis').innerHTML = `
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">שווי נכסים כולל</p>
-        <p class="text-2xl font-black text-slate-800">${nis(tot)}</p>
+/* Premium KPI card builder — used across all tabs for a consistent, high-end look. */
+function kpiCard(label, value, icon, tone = 'teal', opts = {}) {
+  const tones = {
+    teal:   'background:linear-gradient(135deg,#0d7377,#13a3a8);color:#fff;',
+    emerald:'background:linear-gradient(135deg,#059669,#34d399);color:#fff;',
+    blue:   'background:linear-gradient(135deg,#2563eb,#60a5fa);color:#fff;',
+    orange: 'background:linear-gradient(135deg,#e8732a,#ff9a57);color:#fff;',
+    rose:   'background:linear-gradient(135deg,#e11d48,#fb7185);color:#fff;',
+    slate:  'background:linear-gradient(135deg,#334155,#64748b);color:#fff;'
+  };
+  const valueClass = opts.valueClass || 'text-slate-900';
+  const sub = opts.sub ? `<p class="text-[11px] font-semibold text-slate-400 mt-1.5">${opts.sub}</p>` : '';
+  const border = opts.accentBorder ? `border-right:4px solid ${opts.accentBorder};` : '';
+  return `
+    <div class="kpi p-5 flex items-center justify-between gap-3" style="${border}">
+      <div class="min-w-0">
+        <p class="eyebrow mb-1.5">${label}</p>
+        <p class="text-[1.7rem] leading-none font-black ${valueClass} num">${value}</p>
+        ${sub}
       </div>
-      <div class="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center text-lg">🏠</div>
-    </div>
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">מספר נכסים</p>
-        <p class="text-2xl font-black text-slate-800">${S.properties.length}</p>
-      </div>
-      <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg">📊</div>
+      <div class="icon-chip" style="${tones[tone] || tones.teal}">${icon}</div>
     </div>`;
+}
+
+function renderPropsKpis() {
+  document.getElementById('props-kpis').innerHTML =
+    kpiCard('שווי נכסים כולל', nis(totalProperty()), '🏠', 'teal') +
+    kpiCard('מספר נכסים', S.properties.length, '📊', 'blue');
 }
 
 /* ═══════════════════ INCOME & LOANS ═══════════════════ */
@@ -827,28 +906,10 @@ function renderIncome() {
 }
 
 function renderIncomeKpis() {
-  document.getElementById('income-kpis').innerHTML = `
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase mb-1">סך הכנסות משפחתיות</p>
-        <p class="text-2xl font-black text-emerald-600">${nis(totalIncome())}</p>
-      </div>
-      <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg">💵</div>
-    </div>
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase mb-1">סך החזרי הלוואות</p>
-        <p class="text-2xl font-black text-rose-600">${nis(totalLoans())}</p>
-      </div>
-      <div class="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-lg">💳</div>
-    </div>
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase mb-1">הכנסה פנויה נטו</p>
-        <p class="text-2xl font-black text-slate-800">${nis(netIncome())}</p>
-      </div>
-      <div class="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center text-lg font-bold">₪</div>
-    </div>`;
+  document.getElementById('income-kpis').innerHTML =
+    kpiCard('סך הכנסות משפחתיות', nis(totalIncome()), '💵', 'emerald', { valueClass: 'text-emerald-600' }) +
+    kpiCard('סך החזרי הלוואות', nis(totalLoans()), '💳', 'rose', { valueClass: 'text-rose-600' }) +
+    kpiCard('הכנסה פנויה נטו', nis(netIncome()), '₪', 'slate');
 }
 
 /* ═══════════════════ OFFERS ═══════════════════ */
@@ -1022,7 +1083,7 @@ function renderOffers() {
         <div class="text-5xl mb-3">🏦</div>
         <p class="text-lg font-bold text-slate-700">אין תמהילי הצעות כרגע</p>
         <p class="text-sm text-slate-500 mt-1 mb-4">לחצו על הכפתור "הוסף תמהיל הצעה חדש" כדי להתחיל ליצור השוואות.</p>
-        <button onclick="addOffer()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md">
+        <button onclick="addOffer()" class="btn btn-primary mx-auto">
           הוסף הצעה ראשונה
         </button>
       </div>`;
@@ -1251,35 +1312,11 @@ function renderOffersKpis() {
   const best = calcs.reduce((a, b) => b.monthlyPayment > 0 && (a.monthlyPayment === 0 || b.monthlyPayment < a.monthlyPayment) ? b : a, calcs[0]);
   const cheapestTotal = calcs.reduce((a, b) => b.totalPaid > 0 && (a.totalPaid === 0 || b.totalPaid < a.totalPaid) ? b : a, calcs[0]);
   
-  document.getElementById('offers-kpis').innerHTML = `
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">מספר הצעות תמהיל</p>
-        <p class="text-2xl font-black text-slate-800">${S.offers.length}</p>
-      </div>
-      <div class="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center text-lg">📁</div>
-    </div>
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between border-r-4 border-r-emerald-500">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">החזר חודשי נמוך</p>
-        <p class="text-2xl font-black text-emerald-600">${nis(best.monthlyPayment)}</p>
-      </div>
-      <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg">⬇️</div>
-    </div>
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between border-r-4 border-r-blue-500">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">תמהיל זול (עלות כוללת)</p>
-        <p class="text-2xl font-black text-blue-600">${nis(cheapestTotal.totalPaid)}</p>
-      </div>
-      <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg">📉</div>
-    </div>
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-      <div>
-        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">שווי נכסים כולל</p>
-        <p class="text-2xl font-black text-slate-800">${nis(tp)}</p>
-      </div>
-      <div class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-lg">🏠</div>
-    </div>`;
+  document.getElementById('offers-kpis').innerHTML =
+    kpiCard('מספר הצעות תמהיל', S.offers.length, '📁', 'slate') +
+    kpiCard('החזר חודשי נמוך', nis(best.monthlyPayment), '⬇️', 'emerald', { valueClass: 'text-emerald-600', accentBorder: '#10b981' }) +
+    kpiCard('תמהיל זול (עלות כוללת)', nis(cheapestTotal.totalPaid), '📉', 'blue', { valueClass: 'text-blue-600', accentBorder: '#3b82f6' }) +
+    kpiCard('שווי נכסים כולל', nis(tp), '🏠', 'orange');
 
   // Dynamic alerts
   let alerts = [];
@@ -1609,7 +1646,18 @@ function renderChart(list) {
   const yv = v => padT + plotH - (v / maxV) * plotH;
   
   let svg = `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" style="direction: ltr;">`;
-  
+
+  // Premium defs: soft line glow + per-series area gradients
+  svg += `<defs>
+    <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    ${series.map((s, si) => `<linearGradient id="area${si}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${s.color}" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="${s.color}" stop-opacity="0"/>
+    </linearGradient>`).join('')}
+  </defs>`;
+
   // Y-axis gridlines
   for (let g = 0; g <= 4; g++) {
     const v = maxV * g / 4;
@@ -1628,13 +1676,18 @@ function renderChart(list) {
     `;
   }
   
-  // Plot paths
-  series.forEach(s => {
+  // Plot paths (area fill under each line, then the glowing line, then markers)
+  const baseY = (padT + plotH).toFixed(1);
+  series.forEach((s, si) => {
     if (s.pts.length < 1) return;
     const d = s.pts.map((p, idx) => `${idx === 0 ? 'M' : 'L'}${x(p.y).toFixed(1)},${yv(p.v).toFixed(1)}`).join(' ');
-    
+    const first = x(s.pts[0].y).toFixed(1);
+    const last = x(s.pts[s.pts.length - 1].y).toFixed(1);
+    const area = `M${first},${baseY} ` + s.pts.map(p => `L${x(p.y).toFixed(1)},${yv(p.v).toFixed(1)}`).join(' ') + ` L${last},${baseY} Z`;
+
     svg += `
-      <path d="${d}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${area}" fill="url(#area${si})" stroke="none"/>
+      <path d="${d}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>
       ${s.pts.map(p => `
         <circle cx="${x(p.y).toFixed(1)}" cy="${yv(p.v).toFixed(1)}" r="4.5" fill="#ffffff" stroke="${s.color}" stroke-width="2.5">
           <title>${s.name} - שנה ${p.y}: ${nis(p.v)}</title>
@@ -1835,15 +1888,15 @@ function renderScenarios() {
   }).join('') : '<p class="text-sm text-slate-400">עדיין לא נשמרו תרחישים. שמרו את מצב העבודה הנוכחי כדי לחזור אליו בקלות או להשוות מול גרסאות אחרות.</p>';
 
   el.innerHTML = `
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <div class="app-card p-5">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
         <div>
           <h2 class="text-lg font-bold text-slate-900">🗂️ תרחישים שמורים</h2>
           <p class="text-xs text-slate-500 mt-0.5">שמרו גרסאות של תמהילי המשכנתא והשוו ביניהן, או צרו קישור לשיתוף.</p>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="saveScenarioPrompt()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all shadow-sm flex items-center gap-2">💾 שמירת תרחיש נוכחי</button>
-          <button onclick="copyShareLink()" class="bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 rounded-xl text-sm transition-all border border-slate-200 flex items-center gap-2">🔗 קישור שיתוף</button>
+          <button onclick="saveScenarioPrompt()" class="btn btn-primary">💾 שמירת תרחיש נוכחי</button>
+          <button onclick="copyShareLink()" class="btn btn-ghost">🔗 קישור שיתוף</button>
         </div>
       </div>
       <div class="flex flex-wrap gap-2">${chips}</div>
